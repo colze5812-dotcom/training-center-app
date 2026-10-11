@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>훈련관</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+         -webkit-text-size-adjust: 100%; }
+  .card-hover { transition: transform .2s, box-shadow .2s; }
+  .card-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.06); }
+  [hidden] { display: none !important; }
+  .tabbtn { flex: 1; padding: 10px 4px; font-size: 13px; text-align: center; color: #78716c; border-bottom: 2px solid transparent; white-space: nowrap; }
+  .tabbtn.active { color: #1c1917; border-bottom-color: #1c1917; font-weight: 700; }
+  .tabbtn i { display: block; font-size: 16px; margin-bottom: 3px; }
+
+  /* ── 리딩표 ── */
+  .read-table { border-collapse: collapse; font-size: 12px; }
+  .read-table th, .read-table td { border: 1px solid #e7e5e4; text-align: center; min-width: 30px; height: 30px; padding: 0 2px; }
+  .read-table th { background: #f5f5f4; font-weight: 600; color: #57534e; }
+  .read-table th.sun { color: #dc2626; } .read-table th.sat { color: #2563eb; }
+  .read-table th.today { background: #dbeafe; }
+  .read-table td.today { background: #eff6ff; }
+  .read-table .name { position: sticky; left: 0; background: #fff; text-align: left; padding: 0 8px; font-weight: 600; min-width: 64px; z-index: 1; }
+  .read-table tr.me .name { background: #fef3c7; }
+  .read-table tr.me td.cell { cursor: pointer; background: #fffbeb; }
+  .read-table tr.me td.cell:hover { background: #fde68a; }
+  .read-table td.has { color: #1c1917; font-weight: 600; }
+  .read-table td.total { background: #f5f5f4; font-weight: 700; }
+
+  /* ── 캘린더 (식단표 & 식번 달력 원본 스타일, #tab-cal 안에서만 적용) ── */
+  #tab-cal .print-title { display: none; text-align: center; font-size: 1.5rem; font-weight: 700; padding: 12px 0 10px; color: #1a202c; }
+  #tab-cal .header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+      background: linear-gradient(135deg, #1a3f7a 0%, #2563eb 100%);
+      color: white; padding: 14px 22px; border-radius: 14px; margin-bottom: 12px; }
+  #tab-cal .header h1 { font-size: 1.25rem; flex: 1; min-width: 140px; font-weight: 700; }
+  #tab-cal .month-nav { display: flex; align-items: center; gap: 10px; }
+  #tab-cal .month-nav button { background: rgba(255,255,255,0.18); border: none; color: white;
+      width: 30px; height: 30px; border-radius: 8px; cursor: pointer; font-size: 0.95rem; }
+  #tab-cal .month-nav button:hover { background: rgba(255,255,255,0.32); }
+  #tab-cal .month-nav .lbl { font-size: 1.05rem; font-weight: 700; min-width: 96px; text-align: center; }
+  #tab-cal .header-btns { display: flex; gap: 7px; }
+  #tab-cal .btn { padding: 7px 14px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.82rem; font-weight: 700; }
+  #tab-cal .btn-white { background: rgba(255,255,255,0.92); color: #1a3f7a; }
+  #tab-cal .btn-gray  { background: rgba(255,255,255,0.22); color: white; }
+  #tab-cal .btn:hover { opacity: 0.85; }
+  #tab-cal .settings-panel { background: white; border-radius: 14px; padding: 18px; margin-bottom: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); display: none; }
+  #tab-cal .settings-panel.open { display: block; }
+  #tab-cal .s-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 18px; }
+  #tab-cal .s-sec h3 { font-size: 0.86rem; font-weight: 700; color: #1a3f7a; margin-bottom: 9px; padding-bottom: 5px; border-bottom: 2px solid #dbeafe; }
+  #tab-cal .person-list { display: flex; flex-direction: column; gap: 1px; max-height: 150px; overflow-y: auto;
+      border: 1px solid #e2e8f0; border-radius: 8px; padding: 4px 6px; margin-bottom: 7px; background: #fafafa; }
+  #tab-cal .person-row { display: flex; align-items: center; gap: 3px; padding: 3px 2px; border-bottom: 1px solid #f1f5f9; font-size: 0.8rem; }
+  #tab-cal .person-row:last-child { border-bottom: none; }
+  #tab-cal .person-row .p-num  { color: #94a3b8; font-size: 0.7rem; min-width: 18px; }
+  #tab-cal .person-row .p-name { flex: 1; color: #1a202c; }
+  #tab-cal .person-row .mv { cursor: pointer; color: #94a3b8; background: none; border: none; font-size: 0.8rem; padding: 1px 4px; border-radius: 3px; line-height: 1; }
+  #tab-cal .person-row .mv:hover { background: #e2e8f0; color: #4a5568; }
+  #tab-cal .person-row .mv:disabled { opacity: 0.2; cursor: default; }
+  #tab-cal .person-row .x { cursor: pointer; color: #ef4444; font-weight: 900; font-size: 0.82rem; padding: 0 2px; }
+  #tab-cal .btn-excel { font-size: 0.75rem; color: #059669; background: #ecfdf5; border: 1px solid #6ee7b7; border-radius: 6px;
+      padding: 4px 9px; cursor: pointer; font-weight: 600; margin-bottom: 5px; }
+  #tab-cal .btn-excel:hover { background: #d1fae5; }
+  #tab-cal .menu-scroll { display: flex; flex-direction: column; gap: 2px; max-height: 180px; overflow-y: auto;
+      border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 8px; margin-bottom: 7px; background: #fafafa; }
+  #tab-cal .menu-row { display: flex; align-items: center; gap: 4px; padding: 2px 0; border-bottom: 1px solid #f1f5f9; font-size: 0.8rem; }
+  #tab-cal .menu-row:last-child { border-bottom: none; }
+  #tab-cal .menu-row .m-num { color: #94a3b8; font-size: 0.7rem; min-width: 22px; }
+  #tab-cal .menu-row .m-name { flex: 1; color: #1a202c; }
+  #tab-cal .menu-row .x { cursor: pointer; color: #ef4444; font-weight: 900; font-size: 0.82rem; padding: 0 2px; }
+  #tab-cal .menu-count { font-size: 0.72rem; color: #94a3b8; margin-bottom: 5px; }
+  #tab-cal .bulk-toggle { font-size: 0.75rem; color: #3b82f6; cursor: pointer; text-decoration: underline; margin-bottom: 5px; display: inline-block; }
+  #tab-cal .bulk-area { display: none; margin-bottom: 6px; }
+  #tab-cal .bulk-area.open { display: block; }
+  #tab-cal .bulk-area textarea { width: 100%; height: 90px; padding: 6px 8px; border: 1px solid #cbd5e0; border-radius: 8px;
+      font-family: inherit; font-size: 0.8rem; resize: vertical; margin-bottom: 4px; }
+  #tab-cal .btn-bulk { background: #3b82f6; color: white; padding: 4px 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.78rem; font-weight: 700; }
+  #tab-cal .add-row { display: flex; gap: 5px; }
+  #tab-cal .add-row input { flex: 1; min-width: 0; padding: 5px 9px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 0.82rem; font-family: inherit; }
+  #tab-cal .add-row input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px #bfdbfe; }
+  #tab-cal .btn-add { background: #22c55e; color: white; padding: 5px 11px; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.82rem; }
+  #tab-cal .s-field { margin-bottom: 8px; }
+  #tab-cal .s-field label { display: block; font-size: 0.78rem; color: #64748b; margin-bottom: 2px; }
+  #tab-cal .s-field input, #tab-cal .s-field select { width: 100%; padding: 5px 9px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 0.82rem; font-family: inherit; background: white; }
+  #tab-cal .cal-wrap { background: white; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+  #tab-cal .cal-head { display: grid; grid-template-columns: 70px repeat(7, 1fr); background: #1a3f7a; color: white; }
+  #tab-cal .cal-head > div { padding: 9px 4px; text-align: center; font-size: 0.83rem; font-weight: 700; }
+  #tab-cal .cal-head .tk-hd { background: #122d5c; font-size: 0.74rem; }
+  #tab-cal .cal-week { display: grid; grid-template-columns: 70px repeat(7, 1fr); border-bottom: 1px solid #e2e8f0; }
+  #tab-cal .cal-week:last-child { border-bottom: none; }
+  #tab-cal .tk-cell { padding: 8px 5px; background: #f8fafc; border-right: 1px solid #e2e8f0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
+  #tab-cal .tk-cell .tk-lbl { font-size: 0.62rem; color: #94a3b8; letter-spacing: 0.04em; }
+  #tab-cal .tk-pill { background: #fef3c7; border: 1px solid #fcd34d; color: #92400e; padding: 3px 7px; border-radius: 12px; font-size: 0.76rem; font-weight: 700; text-align: center; }
+  #tab-cal .no-tk { font-size: 0.7rem; color: #d1d5db; }
+  #tab-cal .day-cell { padding: 7px 6px; border-right: 1px solid #e2e8f0; min-height: 108px; }
+  #tab-cal .day-cell:last-child { border-right: none; }
+  #tab-cal .day-cell.outside { background: #fafafa; }
+  #tab-cal .day-cell.today   { background: #eff6ff; }
+  #tab-cal .day-cell.thu     { background: #f8f8f8; }
+  #tab-cal .day-num { font-size: 0.83rem; font-weight: 700; margin-bottom: 5px; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; }
+  #tab-cal .today .day-num   { background: #2563eb; color: white; }
+  #tab-cal .outside .day-num { color: #d1d5db; }
+  #tab-cal .sun-day:not(.outside) .day-num { color: #dc2626; }
+  #tab-cal .sat-day:not(.outside) .day-num { color: #2563eb; }
+  #tab-cal .meal-badge { font-size: 0.67rem; font-weight: 700; padding: 2px 6px; border-radius: 10px; display: inline-block; margin-bottom: 4px; }
+  #tab-cal .badge-jugan   { background: #dcfce7; color: #15803d; }
+  #tab-cal .badge-bread   { background: #fef3c7; color: #b45309; }
+  #tab-cal .badge-evening { background: #fee2e2; color: #b91c1c; }
+  #tab-cal .badge-off     { background: #f1f5f9; color: #94a3b8; }
+  #tab-cal .meal-person { font-size: 0.78rem; font-weight: 700; color: #1a3f7a; margin-bottom: 2px; }
+  #tab-cal .meal-menu   { font-size: 0.73rem; color: #64748b; line-height: 1.5; }
+  #tab-cal .empty-txt   { font-size: 0.7rem; color: #d1d5db; }
+  #tab-cal .memo-section { background: white; border-radius: 14px; padding: 16px; margin-top: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+  #tab-cal .memo-label { font-size: 0.86rem; font-weight: 700; color: #1a3f7a; margin-bottom: 8px; padding-bottom: 5px; border-bottom: 2px solid #dbeafe; }
+  #tab-cal #memoInput { width: 100%; min-height: 100px; padding: 10px; border: 1px solid #cbd5e0; border-radius: 8px; font-family: inherit; font-size: 0.85rem; resize: vertical; line-height: 1.6; }
+  #tab-cal #memoPrint { display: none; white-space: pre-wrap; font-size: 0.85rem; line-height: 1.6; padding: 8px 0; }
+  @media (max-width: 680px) {
+    #tab-cal .cal-head  { grid-template-columns: 46px repeat(7, 1fr); }
+    #tab-cal .cal-week  { grid-template-columns: 46px repeat(7, 1fr); }
+    #tab-cal .day-cell  { padding: 4px; min-height: 80px; }
+    #tab-cal .meal-person, #tab-cal .meal-menu { font-size: 0.65rem; }
+    #tab-cal .tk-pill   { font-size: 0.68rem; padding: 2px 5px; }
+  }
+  @page { margin: 1.2cm; }
+  @media print {
+    html, body { background: white; }
+    #app-header, #tab-cal .header, #tab-cal .settings-panel, #toast-container { display: none !important; }
+    main { padding: 0 !important; max-width: 100% !important; }
+    #tab-cal .print-title { display: block; }
+    #tab-cal .cal-wrap, #tab-cal .memo-section { border-radius: 0; box-shadow: none; page-break-inside: avoid; }
+    #tab-cal #memoInput { display: none; }
+    #tab-cal #memoPrint { display: block; }
+  }
+</style>
+</head>
+<body class="bg-stone-50 text-stone-800 min-h-screen">
+
+<!-- ══ 설정이 안 된 경우 ══ -->
+<section id="screen-setup" hidden class="max-w-xl mx-auto px-5 py-16">
+  <div class="bg-white rounded-2xl p-8 shadow-sm border border-stone-200">
+    <div class="text-4xl mb-4">🔧</div>
+    <h1 class="text-xl font-bold mb-3">아직 Firebase 설정이 안 됐습니다</h1>
+    <p class="text-sm text-stone-600 leading-relaxed mb-4">
+      같은 폴더의 <code class="bg-stone-100 px-1.5 py-0.5 rounded">config.js</code> 를 확인해 주세요.
+    </p>
+    <p id="setup-detail" class="text-xs text-red-600 bg-red-50 rounded-lg p-3 font-mono break-all"></p>
+  </div>
+</section>
+
+<!-- ══ 시작 화면 ══ -->
+<section id="screen-start" hidden class="max-w-xl mx-auto px-5 py-16">
+  <div class="bg-white rounded-2xl p-8 shadow-sm border border-stone-200 text-center">
+    <div class="text-4xl mb-4">🏠</div>
+    <h1 class="text-2xl font-bold mb-2">훈련관</h1>
+    <p class="text-sm text-stone-600 leading-relaxed mb-7">
+      식번 달력 · 청소 구역 · 리딩표 · 기도제목 · 마음의 편지를<br>한 링크에서 함께 쓰는 공간입니다.
+    </p>
+    <button id="btn-create-board"
+      class="w-full bg-stone-800 hover:bg-stone-900 text-white rounded-xl px-6 py-3.5 font-medium transition-colors">
+      <i class="fa-solid fa-plus mr-2"></i>새로 만들기
+    </button>
+    <p class="text-xs text-stone-400 mt-5 leading-relaxed">
+      이미 쓰던 기도제목보드가 있으면 그 링크의 <b>#/b/… 부분</b>을 이 주소 뒤에 붙이면<br>
+      기도제목이 그대로 이어집니다. 이 버튼은 <b>처음 한 번만</b> 누릅니다.
+    </p>
+  </div>
+</section>
+
+<!-- ══ 본 화면 ══ -->
+<section id="screen-board" hidden>
+  <header id="app-header" class="sticky top-0 z-30 bg-stone-50/95 backdrop-blur border-b border-stone-200">
+    <div class="max-w-6xl mx-auto px-4 pt-3">
+      <div class="flex items-center justify-between gap-2">
+        <h1 id="board-title" tabindex="0" role="button"
+            class="text-lg sm:text-xl font-bold text-stone-900 cursor-text hover:bg-stone-100 rounded px-1 -mx-1 truncate"
+            title="눌러서 수정">훈련관</h1>
+        <div class="flex items-center gap-1.5 flex-shrink-0">
+          <span id="conn-badge" class="hidden sm:inline text-xs px-2.5 py-1 rounded-full bg-stone-200 text-stone-600 whitespace-nowrap">연결 중…</span>
+          <button id="btn-me" class="text-xs px-2.5 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 hover:bg-amber-100 transition-colors whitespace-nowrap">
+            <i class="fa-regular fa-user mr-1"></i><span id="me-label">내 이름</span>
+          </button>
+          <button id="btn-share" class="text-xs px-2.5 py-1.5 rounded-lg bg-white border border-stone-200 hover:bg-stone-100 transition-colors whitespace-nowrap">
+            <i class="fa-solid fa-link text-stone-400"></i>
+          </button>
+        </div>
+      </div>
+      <nav id="tabbar" class="flex mt-1 -mx-1">
+        <button class="tabbtn" data-tab="cal"><i class="fa-regular fa-calendar"></i>캘린더</button>
+        <button class="tabbtn" data-tab="clean"><i class="fa-solid fa-broom"></i>청소</button>
+        <button class="tabbtn" data-tab="read"><i class="fa-solid fa-book-open"></i>리딩표</button>
+        <button class="tabbtn" data-tab="pray"><i class="fa-solid fa-hands-praying"></i>기도제목</button>
+        <button class="tabbtn" data-tab="letter"><i class="fa-regular fa-envelope"></i>편지</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-5">
+
+    <!-- ── 캘린더 ── -->
+    <div id="tab-cal" class="tab" hidden>
+      <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleExcelImport(event)">
+      <div class="print-title" id="printTitle"></div>
+      <div class="header">
+        <h1>식단표 &amp; 식번 달력</h1>
+        <div class="month-nav">
+          <button onclick="changeMonth(-1)">&#9664;</button>
+          <span class="lbl" id="monthLabel"></span>
+          <button onclick="changeMonth(1)">&#9654;</button>
+        </div>
+        <div class="header-btns">
+          <button class="btn btn-white" onclick="toggleSettings()">&#9881; 설정</button>
+          <button class="btn btn-gray"  onclick="window.print()">&#128438; 인쇄</button>
+        </div>
+      </div>
+
+      <div class="settings-panel" id="settingsPanel">
+        <div class="s-grid">
+          <div class="s-sec">
+            <h3>&#128100; 식번 인원</h3>
+            <div class="person-list" id="peopleList"></div>
+            <button class="btn-excel" onclick="openExcelImport('people')">&#128229; 엑셀에서 가져오기</button>
+            <div class="add-row">
+              <input type="text" id="personInput" placeholder="이름 입력" onkeydown="if(event.key==='Enter')addPerson()">
+              <button class="btn-add" onclick="addPerson()">+</button>
+            </div>
+          </div>
+          <div class="s-sec">
+            <h3>&#9200; 타임키퍼</h3>
+            <div class="person-list" id="tkList"></div>
+            <button class="btn-excel" onclick="openExcelImport('timeKeepers')">&#128229; 엑셀에서 가져오기</button>
+            <div class="add-row">
+              <input type="text" id="tkInput" placeholder="이름 입력" onkeydown="if(event.key==='Enter')addTK()">
+              <button class="btn-add" onclick="addTK()">+</button>
+            </div>
+          </div>
+          <div class="s-sec">
+            <h3>&#127939; 토요일 식번 인원</h3>
+            <div class="person-list" id="satPeopleList"></div>
+            <button class="btn-excel" onclick="openExcelImport('satPeople')">&#128229; 엑셀에서 가져오기</button>
+            <div class="add-row">
+              <input type="text" id="satPersonInput" placeholder="이름 입력" onkeydown="if(event.key==='Enter')addSatPerson()">
+              <button class="btn-add" onclick="addSatPerson()">+</button>
+            </div>
+          </div>
+          <div class="s-sec" style="grid-column: span 2; min-width:0;">
+            <h3>&#127869; 메뉴 <span id="menuCountBadge" class="menu-count"></span></h3>
+            <div class="menu-scroll" id="menuList"></div>
+            <div style="display:flex;gap:6px;align-items:center;margin-bottom:2px;">
+              <button class="btn-excel" onclick="openExcelImport('menus')">&#128229; 엑셀에서 가져오기</button>
+              <button class="btn-excel" style="color:#ef4444;background:#fef2f2;border-color:#fca5a5;" onclick="clearMenus()">&#128465; 메뉴 초기화</button>
+            </div>
+            <div class="add-row" style="margin-bottom:5px;">
+              <input type="text" id="menuInput" placeholder="메뉴 입력 (/ 로 줄바꿈)" onkeydown="if(event.key==='Enter')addMenuEntry()">
+              <button class="btn-add" onclick="addMenuEntry()">+</button>
+            </div>
+            <span class="bulk-toggle" onclick="toggleBulk()">&#128196; 여러 개 한꺼번에 추가</span>
+            <div class="bulk-area" id="bulkArea">
+              <textarea id="bulkInput" placeholder="한 줄에 메뉴 하나씩 입력&#10;예)&#10;된장찌개&#10;비빔밥/계란후라이&#10;불고기"></textarea>
+              <button class="btn-bulk" onclick="bulkAddMenus()">추가</button>
+            </div>
+          </div>
+          <div class="s-sec">
+            <h3 id="monthSettingLabel">&#128197; 담당 설정</h3>
+            <div class="s-field">
+              <label id="personSelectLabel">이번 달 첫 번째 식번</label>
+              <select id="monthPerson" onchange="onMonthSettingChange()"><option value="">인원을 먼저 추가하세요</option></select>
+            </div>
+            <div class="s-field">
+              <label id="tkSelectLabel">이번 달 첫 번째 타임키퍼</label>
+              <select id="monthTK" onchange="onMonthSettingChange()"><option value="">인원을 먼저 추가하세요</option></select>
+            </div>
+            <div class="s-field">
+              <label id="satSelectLabel">이번 달 첫 번째 토요일 식번</label>
+              <select id="monthSatPerson" onchange="onMonthSettingChange()"><option value="">인원을 먼저 추가하세요</option></select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cal-wrap" id="calWrap"></div>
+
+      <div class="memo-section">
+        <div class="memo-label">&#128221; 메모</div>
+        <textarea id="memoInput" placeholder="메모를 입력하세요..." oninput="saveMemo()"></textarea>
+        <pre id="memoPrint"></pre>
+      </div>
+    </div>
+
+    <!-- ── 청소 ── -->
+    <div id="tab-clean" class="tab" hidden>
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-stone-200">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-bold">청소 구역</h2>
+          <button id="btn-clean-copy" class="text-xs px-3 py-1.5 rounded-lg bg-white border border-stone-200 hover:bg-stone-100 transition-colors">
+            <i class="fa-regular fa-copy mr-1"></i>복사
+          </button>
+        </div>
+        <div id="clean-list" class="space-y-2"></div>
+        <div class="flex gap-2 mt-4">
+          <input id="clean-zone-input" type="text" maxlength="30" placeholder="구역 이름 (예: 화장실)"
+                 class="flex-grow min-w-0 border border-stone-200 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-stone-800/10 focus:border-stone-400">
+          <button id="btn-clean-add" class="text-sm px-4 py-2.5 rounded-lg bg-stone-800 hover:bg-stone-900 text-white transition-colors whitespace-nowrap">
+            <i class="fa-solid fa-plus mr-1"></i>구역 추가
+          </button>
+        </div>
+        <p class="text-xs text-stone-400 mt-3">이름은 기도제목 탭의 형제 목록에서 가져옵니다.</p>
+      </div>
+    </div>
+
+    <!-- ── 리딩표 ── -->
+    <div id="tab-read" class="tab" hidden>
+      <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-stone-200">
+        <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <h2 class="text-lg font-bold">리딩표</h2>
+          <div class="flex items-center gap-2">
+            <button id="read-prev" class="w-8 h-8 rounded-lg bg-stone-100 hover:bg-stone-200"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+            <span id="read-month" class="font-bold min-w-[90px] text-center"></span>
+            <button id="read-next" class="w-8 h-8 rounded-lg bg-stone-100 hover:bg-stone-200"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+          </div>
+        </div>
+        <p id="read-hint" class="text-xs text-stone-500 mb-3"></p>
+        <div class="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+          <table id="read-table" class="read-table"></table>
+        </div>
+        <div id="read-summary"></div>
+      </div>
+    </div>
+
+    <!-- ── 기도제목 ── -->
+    <div id="tab-pray" class="tab" hidden>
+      <div class="flex items-start justify-between gap-3 flex-wrap mb-3">
+        <p id="week-indicator" tabindex="0" role="button"
+           class="text-base font-bold text-stone-700 cursor-text hover:bg-stone-100 rounded px-1 -mx-1 inline-block"
+           title="눌러서 수정">불러오는 중…</p>
+        <button id="btn-archive-list" class="text-sm px-3 py-2 rounded-lg bg-white border border-stone-200 hover:bg-stone-100 transition-colors whitespace-nowrap">
+          <i class="fa-regular fa-clock mr-1.5 text-stone-400"></i>지난 주차
+        </button>
+      </div>
+      <div class="flex items-center gap-2 mb-5 flex-wrap">
+        <button id="btn-copy" class="text-sm px-3.5 py-2 rounded-lg bg-stone-800 hover:bg-stone-900 text-white transition-colors">
+          <i class="fa-regular fa-copy mr-1.5"></i>전체 복사
+        </button>
+        <button id="btn-add" class="text-sm px-3.5 py-2 rounded-lg bg-white border border-stone-200 hover:bg-stone-100 transition-colors">
+          <i class="fa-solid fa-user-plus mr-1.5 text-stone-400"></i>형제 추가
+        </button>
+        <button id="btn-md" class="text-sm px-3.5 py-2 rounded-lg bg-white border border-stone-200 hover:bg-stone-100 transition-colors">
+          <i class="fa-regular fa-file-lines mr-1.5 text-stone-400"></i>md로 저장
+        </button>
+        <button id="btn-save-week" class="text-sm px-3.5 py-2 rounded-lg bg-white border border-stone-200 hover:bg-stone-100 transition-colors">
+          <i class="fa-solid fa-box-archive mr-1.5 text-stone-400"></i>이번 주 보관
+        </button>
+      </div>
+      <div id="prayer-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+      <p class="text-xs text-stone-400 leading-relaxed mt-8">
+        적는 즉시 모든 형제 화면에 반영됩니다.
+        <b>링크를 아는 사람은 누구나 읽고 고칠 수 있으니</b> 단톡방 밖으로 내보내지 마세요.
+      </p>
+    </div>
+
+    <!-- ── 마음의 편지 ── -->
+    <div id="tab-letter" class="tab" hidden>
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-stone-200 mb-4">
+        <h2 class="text-lg font-bold mb-1">마음의 편지</h2>
+        <p class="text-xs text-stone-500 mb-3">누가 썼는지 남지 않습니다. 멤버 모두가 볼 수 있습니다.</p>
+        <textarea id="letter-input" rows="4" maxlength="1000" placeholder="하고 싶은 말을 적어 주세요."
+                  class="w-full border border-stone-200 rounded-lg px-3.5 py-2.5 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-stone-800/10 focus:border-stone-400"></textarea>
+        <div class="flex justify-end mt-2">
+          <button id="btn-letter-send" class="text-sm px-4 py-2.5 rounded-lg bg-stone-800 hover:bg-stone-900 text-white transition-colors">
+            <i class="fa-regular fa-paper-plane mr-1.5"></i>보내기
+          </button>
+        </div>
+      </div>
+      <div id="letter-list" class="space-y-3"></div>
+    </div>
+
+  </main>
+</section>
+
+<!-- ══ 내 이름 고르기 모달 ══ -->
+<div id="me-modal" hidden class="fixed inset-0 z-50 bg-black/40 opacity-0 transition-opacity duration-200 items-center justify-center p-4">
+  <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl scale-95 transition-transform duration-200 max-h-[85vh] flex flex-col">
+    <h2 class="text-lg font-bold mb-1">내 이름 고르기</h2>
+    <p class="text-xs text-stone-500 mb-4">리딩표에 내 줄을 적을 때 씁니다. 이 기기에만 저장됩니다.</p>
+    <div id="me-list" class="overflow-y-auto flex-grow space-y-1.5"></div>
+    <button id="me-close" class="mt-4 text-sm px-4 py-2.5 rounded-lg text-stone-600 hover:bg-stone-100 transition-colors">닫기</button>
+  </div>
+</div>
+
+<!-- ══ 기도제목 수정 모달 ══ -->
+<div id="edit-modal" hidden class="fixed inset-0 z-50 bg-black/40 opacity-0 transition-opacity duration-200 items-center justify-center p-4">
+  <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl scale-95 transition-transform duration-200 max-h-[90vh] overflow-y-auto">
+    <h2 id="modal-title" class="text-lg font-bold mb-5">기도제목 수정</h2>
+    <input type="hidden" id="edit-id">
+    <label class="block text-xs font-medium text-stone-500 mb-1.5">이름</label>
+    <input id="edit-name" type="text" maxlength="20" placeholder="예) 김요한"
+           class="w-full border border-stone-200 rounded-lg px-3.5 py-2.5 mb-5 text-sm focus:outline-none focus:ring-2 focus:ring-stone-800/10 focus:border-stone-400">
+    <label class="block text-xs font-medium text-stone-500 mb-1.5">기도제목</label>
+    <div id="req-list" class="space-y-2 mb-2"></div>
+    <button id="btn-add-req" type="button" class="text-xs text-stone-500 hover:text-stone-800 mb-5 transition-colors">
+      <i class="fa-solid fa-plus mr-1"></i>기도제목 한 줄 더
+    </button>
+    <div class="flex items-center gap-2 pt-1">
+      <button id="btn-delete" type="button" class="text-sm px-3.5 py-2.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors">삭제</button>
+      <div class="flex-grow"></div>
+      <button id="btn-cancel" type="button" class="text-sm px-4 py-2.5 rounded-lg text-stone-600 hover:bg-stone-100 transition-colors">취소</button>
+      <button id="btn-save" type="button" class="text-sm px-5 py-2.5 rounded-lg bg-stone-800 hover:bg-stone-900 text-white transition-colors">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 지난 주차 모달 ══ -->
+<div id="arch-modal" hidden class="fixed inset-0 z-50 bg-black/40 opacity-0 transition-opacity duration-200 items-center justify-center p-4">
+  <div class="bg-white rounded-2xl w-full max-w-lg p-6 shadow-xl max-h-[85vh] flex flex-col">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-bold">지난 주차 기록</h2>
+      <button id="arch-close" class="w-8 h-8 rounded-full hover:bg-stone-100 text-stone-400 transition-colors"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="arch-body" class="overflow-y-auto flex-grow text-sm"></div>
+  </div>
+</div>
+
+<!-- ══ 링크 공유 모달 ══ -->
+<div id="share-modal" hidden class="fixed inset-0 z-50 bg-black/40 opacity-0 transition-opacity duration-200 items-center justify-center p-4">
+  <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl">
+    <h2 class="text-lg font-bold mb-2">멤버들에게 보낼 링크</h2>
+    <p class="text-xs text-stone-500 mb-4 leading-relaxed">이 주소를 아는 사람은 누구나 보고 고칠 수 있습니다. 단톡방 안에서만 나눠 주세요.</p>
+    <input id="share-url" readonly class="w-full border border-stone-200 rounded-lg px-3.5 py-2.5 text-xs bg-stone-50 mb-4 font-mono">
+    <div class="flex gap-2">
+      <button id="share-copy" class="flex-grow text-sm px-4 py-2.5 rounded-lg bg-stone-800 hover:bg-stone-900 text-white transition-colors"><i class="fa-regular fa-copy mr-1.5"></i>링크 복사</button>
+      <button id="share-close" class="text-sm px-4 py-2.5 rounded-lg text-stone-600 hover:bg-stone-100 transition-colors">닫기</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-[60] flex flex-col items-center gap-2 pointer-events-none px-4"></div>
+
+<script type="module">
+import { firebaseConfig } from './config.js';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
+import { getAuth, signInAnonymously, onAuthStateChanged }
+  from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
+import {
+  getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField,
+  collection, addDoc, onSnapshot, query, orderBy, getDocs, serverTimestamp
+} from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
+
+/* ═══════════════════════════════════════════════════
+   공통
+   ═══════════════════════════════════════════════════ */
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g,
+  (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const show = (el) => el.removeAttribute('hidden');
+const hide = (el) => el.setAttribute('hidden', '');
+
+function showToast(message, type = 'success') {
+  const toast = document.createElement('div');
+  toast.className =
+    (type === 'success' ? 'bg-stone-800' : 'bg-red-600') +
+    ' text-white px-5 py-3 rounded-full shadow-lg text-sm font-medium flex items-center gap-2' +
+    ' transform transition-all duration-300 -translate-y-5 opacity-0 max-w-full';
+  toast.innerHTML =
+    (type === 'success' ? '<i class="fa-solid fa-check-circle text-green-400"></i>'
+                        : '<i class="fa-solid fa-circle-exclamation"></i>') +
+    ' <span>' + esc(message) + '</span>';
+  $('toast-container').appendChild(toast);
+  requestAnimationFrame(() => toast.classList.remove('-translate-y-5', 'opacity-0'));
+  setTimeout(() => { toast.classList.add('opacity-0'); setTimeout(() => toast.remove(), 300); }, 3200);
+}
+
+// 교회·선교회 관행대로 '그 주 일요일'을 기준으로 주차를 셉니다.
+function autoWeek(d = new Date()) {
+  const sun = new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay());
+  const n = Math.ceil(sun.getDate() / 7);
+  const mm = String(sun.getMonth() + 1).padStart(2, '0');
+  return { key: `${sun.getFullYear()}-${mm}-W${n}`, label: `${sun.getMonth() + 1}월 ${n}주차 기도제목 나눔` };
+}
+
+async function copyText(text) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; }
+  } catch (_) { /* 카톡 인앱 브라우저 등 → 아래로 */ }
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch (_) { ok = false; }
+  document.body.removeChild(ta);
+  return ok;
+}
+
+function openModal(el) {
+  show(el);
+  el.classList.add('flex');
+  requestAnimationFrame(() => {
+    el.classList.remove('opacity-0');
+    const c = el.firstElementChild;
+    if (c) { c.classList.remove('scale-95'); c.classList.add('scale-100'); }
+  });
+}
+function closeModal(el) {
+  el.classList.add('opacity-0');
+  const c = el.firstElementChild;
+  if (c) { c.classList.remove('scale-100'); c.classList.add('scale-95'); }
+  setTimeout(() => { hide(el); el.classList.remove('flex'); }, 200);
+}
+
+/* ═══════════════════════════════════════════════════
+   Firebase 시작
+   ═══════════════════════════════════════════════════ */
+let db, boardId;
+let members = [];                  // 기도제목 탭의 형제 목록 = 앱 전체 멤버 목록
+let board = { title: '훈련관', weekLabel: autoWeek().label, cleaning: [] };
+let me = '';                       // 내 멤버 id (이 기기에만 저장)
+
+try {
+  if (String(firebaseConfig.apiKey || '').includes('여기에')) throw new Error('config.js 의 값이 아직 예시 그대로입니다.');
+  const app = initializeApp(firebaseConfig);
+  db = getFirestore(app);
+  const auth = getAuth(app);
+  await signInAnonymously(auth);
+  await new Promise((res) => onAuthStateChanged(auth, (u) => u && res()));
+} catch (e) {
+  $('setup-detail').textContent = e && e.message ? e.message : String(e);
+  show($('screen-setup'));
+  throw e;
+}
+
+/* ── 라우팅: #/b/<id>/<탭> ── */
+const TABS = ['cal', 'clean', 'read', 'pray', 'letter'];
+function readRoute() {
+  const m = location.hash.match(/^#\/b\/([A-Za-z0-9_-]{20,})(?:\/(cal|clean|read|pray|letter))?\/?$/);
+  return m ? { id: m[1], tab: m[2] || 'cal' } : null;
+}
+function newBoardId() {
+  const bytes = crypto.getRandomValues(new Uint8Array(18));
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+const route = readRoute();
+
+if (!route) {
+  show($('screen-start'));
+  $('btn-create-board').addEventListener('click', async () => {
+    const btn = $('btn-create-board');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>만드는 중…';
+    try {
+      const id = newBoardId();
+      await setDoc(doc(db, 'boards', id), {
+        title: '훈련관', weekLabel: autoWeek().label, cleaning: [],
+        createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+      });
+      location.hash = `#/b/${id}`;
+      location.reload();
+    } catch (e) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-plus mr-2"></i>새로 만들기';
+      showToast('만들지 못했습니다: ' + (e.code || e.message), 'error');
+    }
+  });
+} else {
+  boardId = route.id;
+  me = localStorage.getItem('hq_me_' + boardId) || '';
+  // startBoard() 호출은 스크립트 맨 아래에서 (아래 변수들이 먼저 정의돼야 함)
+}
+
+/* ── 탭 ── */
+function switchTab(tab) {
+  if (!TABS.includes(tab)) tab = 'cal';
+  TABS.forEach((t) => { const el = $('tab-' + t); tab === t ? show(el) : hide(el); });
+  document.querySelectorAll('.tabbtn').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
+  history.replaceState(null, '', `#/b/${boardId}/${tab}`);
+}
+document.querySelectorAll('.tabbtn').forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+
+/* ═══════════════════════════════════════════════════
+   보드 시작
+   ═══════════════════════════════════════════════════ */
+function startBoard(tab) {
+  show($('screen-board'));
+  switchTab(tab);
+
+  const boardRef = doc(db, 'boards', boardId);
+  onSnapshot(boardRef, (snap) => {
+    if (!snap.exists()) { showToast('없는 링크입니다. 다시 확인해 주세요.', 'error'); return; }
+    board = snap.data();
+    $('board-title').textContent = board.title || '훈련관';
+    document.title = board.title || '훈련관';
+    $('week-indicator').textContent = board.weekLabel || autoWeek().label;
+    renderClean();
+  }, (e) => showToast('불러오기 실패: ' + (e.code || e.message), 'error'));
+
+  onSnapshot(query(collection(db, 'boards', boardId, 'members'), orderBy('order')), (snap) => {
+    members = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const badge = $('conn-badge');
+    if (snap.metadata.fromCache) {
+      badge.textContent = '오프라인';
+      badge.className = 'hidden sm:inline text-xs px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 whitespace-nowrap';
+    } else {
+      badge.textContent = '실시간 연결됨';
+      badge.className = 'hidden sm:inline text-xs px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 whitespace-nowrap';
+    }
+    renderMe();
+    renderCards();
+    renderClean();
+    renderRead();
+  }, (e) => showToast('불러오기 실패: ' + (e.code || e.message), 'error'));
+
+  makeEditable($('board-title'), 'title');
+  makeEditable($('week-indicator'), 'weekLabel');
+
+  startCalendar();
+  startReading();
+  startLetters();
+}
+
+// 제목·주차 라벨을 눌러서 바로 고치기
+function makeEditable(el, field) {
+  const begin = () => {
+    if (el.querySelector('input')) return;
+    const cur = el.textContent.trim();
+    const input = document.createElement('input');
+    input.type = 'text'; input.value = cur; input.maxLength = 60;
+    input.className = 'bg-white border border-stone-300 rounded px-2 py-0.5 w-full max-w-xs outline-none';
+    el.textContent = '';
+    el.appendChild(input);
+    input.focus(); input.select();
+    let done = false;
+    const finish = async (commit) => {
+      if (done) return;
+      done = true;
+      const val = input.value.trim();
+      el.textContent = commit && val ? val : cur;
+      if (commit && val && val !== cur) {
+        try { await updateDoc(doc(db, 'boards', boardId), { [field]: val, updatedAt: serverTimestamp() }); }
+        catch (e) { showToast('저장 실패: ' + (e.code || e.message), 'error'); }
+      }
+    };
+    input.addEventListener('blur', () => finish(true));
+    input.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') { ev.preventDefault(); finish(true); }
+      if (ev.key === 'Escape') { ev.preventDefault(); finish(false); }
+    });
+  };
+  el.addEventListener('click', begin);
+  el.addEventListener('keydown', (e) => { if (e.key === 'Enter') begin(); });
+}
+
+/* ═══════════════════════════════════════════════════
+   내 이름
+   ═══════════════════════════════════════════════════ */
+function myMember() { return members.find((m) => m.id === me) || null; }
+
+function renderMe() {
+  const m = myMember();
+  $('me-label').textContent = m ? m.name : '내 이름';
+}
+function openMePicker() {
+  const list = $('me-list');
+  if (members.length === 0) {
+    list.innerHTML = '<p class="text-sm text-stone-400 text-center py-6">기도제목 탭에서 형제를 먼저 추가해 주세요.</p>';
+  } else {
+    list.innerHTML = members.map((m) => `
+      <button data-me="${esc(m.id)}" class="w-full text-left px-4 py-2.5 rounded-lg border transition-colors
+        ${m.id === me ? 'bg-amber-50 border-amber-300 font-bold' : 'bg-white border-stone-200 hover:bg-stone-50'}">
+        ${esc(m.name)}</button>`).join('');
+    list.querySelectorAll('[data-me]').forEach((b) => b.addEventListener('click', () => {
+      me = b.dataset.me;
+      localStorage.setItem('hq_me_' + boardId, me);
+      renderMe(); renderRead();
+      closeModal($('me-modal'));
+    }));
+  }
+  openModal($('me-modal'));
+}
+$('btn-me').addEventListener('click', openMePicker);
+$('me-close').addEventListener('click', () => closeModal($('me-modal')));
+$('me-modal').addEventListener('click', (e) => { if (e.target === $('me-modal')) closeModal($('me-modal')); });
+
+/* ═══════════════════════════════════════════════════
+   캘린더 (식단표 & 식번 달력 — 원본 로직 그대로, 저장만 Firestore)
+   ═══════════════════════════════════════════════════ */
+let S = {
+  year: new Date().getFullYear(), month: new Date().getMonth(),
+  people: [], satPeople: [], timeKeepers: [], menus: [],
+  monthSettings: {},   // { 'YYYY-MM': { personName, satPersonName, tkName } }
+  memo: ''
+};
+const calRef = () => doc(db, 'boards', boardId, 'calendar', 'settings');
+let calSaveTimer = null;
+
+function saveCal() {
+  clearTimeout(calSaveTimer);
+  calSaveTimer = setTimeout(async () => {
+    const { people, satPeople, timeKeepers, menus, monthSettings, memo } = S;
+    try { await setDoc(calRef(), { people, satPeople, timeKeepers, menus, monthSettings, memo, updatedAt: serverTimestamp() }); }
+    catch (e) { showToast('달력 저장 실패: ' + (e.code || e.message), 'error'); }
+  }, 300);
+}
+
+function startCalendar() {
+  renderLists(); renderCal();   // 데이터가 오기 전에도 빈 달력은 보이게
+  onSnapshot(calRef(), (snap) => {
+    if (snap.exists()) {
+      const d = snap.data();
+      S.people = d.people || []; S.satPeople = d.satPeople || []; S.timeKeepers = d.timeKeepers || [];
+      S.menus = d.menus || []; S.monthSettings = d.monthSettings || {}; S.memo = d.memo || '';
+    }
+    const memoEl = $('memoInput');
+    if (document.activeElement !== memoEl) memoEl.value = S.memo;
+    $('memoPrint').textContent = S.memo;
+    renderLists(); renderCal();
+  }, (e) => showToast('달력 불러오기 실패: ' + (e.code || e.message), 'error'));
+}
+
+function addPerson() {
+  const el = $('personInput'); const v = el.value.trim();
+  if (v && !S.people.includes(v)) { S.people.push(v); saveCal(); renderLists(); renderCal(); }
+  el.value = ''; el.focus();
+}
+function removePerson(i) { S.people.splice(i, 1); saveCal(); renderLists(); renderCal(); }
+function addTK() {
+  const el = $('tkInput'); const v = el.value.trim();
+  if (v && !S.timeKeepers.includes(v)) { S.timeKeepers.push(v); saveCal(); renderLists(); renderCal(); }
+  el.value = ''; el.focus();
+}
+function removeTK(i) { S.timeKeepers.splice(i, 1); saveCal(); renderLists(); renderCal(); }
+function addSatPerson() {
+  const el = $('satPersonInput'); const v = el.value.trim();
+  if (v && !S.satPeople.includes(v)) { S.satPeople.push(v); saveCal(); renderLists(); renderCal(); }
+  el.value = ''; el.focus();
+}
+function removeSatPerson(i) { S.satPeople.splice(i, 1); saveCal(); renderLists(); renderCal(); }
+
+/* 엑셀 가져오기 */
+let _importTarget = null;
+const SKIP_HEADERS = new Set(['이름', '성명', '순번', '번호', 'name', 'no', '성명/이름', '구분', '메뉴', '식단', '음식', 'menu', 'food']);
+function openExcelImport(listKey) {
+  _importTarget = listKey;
+  const el = $('excelFileInput'); el.value = ''; el.click();
+}
+function handleExcelImport(event) {
+  const file = event.target.files[0];
+  if (!file || !_importTarget) return;
+  if (typeof XLSX === 'undefined') { showToast('엑셀 기능을 쓰려면 인터넷 연결이 필요합니다.', 'error'); return; }
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
+      const arr = S[_importTarget];
+      const isMenus = _importTarget === 'menus';
+      let added = 0;
+      for (const row of rows) {
+        const raw = String(row[0] ?? '').trim();
+        if (!raw) continue;
+        if (SKIP_HEADERS.has(raw.toLowerCase())) continue;
+        if (!isMenus && arr.includes(raw)) continue;
+        if (isMenus && raw === arr[arr.length - 1]) continue;
+        arr.push(raw); added++;
+      }
+      if (added > 0) { saveCal(); renderLists(); renderCal(); showToast(`${added}개가 추가됐습니다.`); }
+      else showToast('추가할 새 항목이 없습니다.', 'error');
+    } catch (err) {
+      showToast('파일을 읽을 수 없습니다. xlsx / xls / csv 인지 확인해 주세요.', 'error');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function moveItem(key, i, dir) {
+  const arr = S[key]; const j = i + dir;
+  if (j < 0 || j >= arr.length) return;
+  [arr[i], arr[j]] = [arr[j], arr[i]];
+  saveCal(); renderLists(); renderCal();
+}
+function dedupeConsec(arr) { return arr.filter((v, i) => i === 0 || v !== arr[i - 1]); }
+function addMenuEntry() {
+  const el = $('menuInput'); const v = el.value.trim();
+  if (v && v !== S.menus[S.menus.length - 1]) { S.menus.push(v); saveCal(); renderLists(); renderCal(); }
+  el.value = ''; el.focus();
+}
+function removeMenu(i) { S.menus.splice(i, 1); saveCal(); renderLists(); renderCal(); }
+function toggleBulk() { $('bulkArea').classList.toggle('open'); }
+function bulkAddMenus() {
+  const ta = $('bulkInput');
+  const lines = ta.value.split('\n').map((l) => l.trim()).filter(Boolean);
+  if (!lines.length) return;
+  lines.forEach((l) => { if (l !== S.menus[S.menus.length - 1]) S.menus.push(l); });
+  ta.value = '';
+  $('bulkArea').classList.remove('open');
+  saveCal(); renderLists(); renderCal();
+}
+function clearMenus() {
+  if (!S.menus.length) return;
+  if (!confirm(`메뉴 ${S.menus.length}개를 모두 삭제할까요?`)) return;
+  S.menus = []; saveCal(); renderLists(); renderCal();
+}
+function saveMemo() {
+  S.memo = $('memoInput').value;
+  $('memoPrint').textContent = S.memo;
+  saveCal();
+}
+
+function personRowHTML(name, i, len, removeFn, listKey) {
+  return `<div class="person-row">
+    <span class="p-num">${i + 1}</span>
+    <span class="p-name">${esc(name)}</span>
+    <button class="mv" onclick="moveItem('${listKey}',${i},-1)" ${i === 0 ? 'disabled' : ''}>&#9650;</button>
+    <button class="mv" onclick="moveItem('${listKey}',${i},1)" ${i === len - 1 ? 'disabled' : ''}>&#9660;</button>
+    <span class="x" onclick="${removeFn}(${i})">&#215;</span>
+  </div>`;
+}
+function emptyRow() { return '<span style="font-size:.76rem;color:#d1d5db;padding:4px 2px;display:block">없음</span>'; }
+
+function renderLists() {
+  const pl = S.people, sp = S.satPeople, tk = S.timeKeepers;
+  $('peopleList').innerHTML = pl.length ? pl.map((n, i) => personRowHTML(n, i, pl.length, 'removePerson', 'people')).join('') : emptyRow();
+  $('satPeopleList').innerHTML = sp.length ? sp.map((n, i) => personRowHTML(n, i, sp.length, 'removeSatPerson', 'satPeople')).join('') : emptyRow();
+  $('tkList').innerHTML = tk.length ? tk.map((n, i) => personRowHTML(n, i, tk.length, 'removeTK', 'timeKeepers')).join('') : emptyRow();
+  $('menuList').innerHTML = S.menus.length
+    ? S.menus.map((m, i) => `<div class="menu-row"><span class="m-num">${i + 1}</span><span class="m-name">${esc(m)}</span><span class="x" onclick="removeMenu(${i})">&#215;</span></div>`).join('')
+    : '<span style="font-size:.76rem;color:#d1d5db">없음</span>';
+  $('menuCountBadge').textContent = S.menus.length ? `(${S.menus.length}개)` : '';
+  renderSelects();
+}
+
+function renderSelects() {
+  const mn = S.month + 1;
+  const saved = S.monthSettings[monthKey(S.year, S.month)] || {};
+  $('monthSettingLabel').textContent = `${S.year}년 ${mn}월 담당 설정`;
+  $('personSelectLabel').textContent = `${mn}월 첫 번째 식번`;
+  $('satSelectLabel').textContent = `${mn}월 첫 번째 토요일 식번`;
+  $('tkSelectLabel').textContent = `${mn}월 첫 번째 타임키퍼`;
+  buildSelect('monthPerson', S.people, saved.personName || '');
+  buildSelect('monthSatPerson', S.satPeople, saved.satPersonName || '');
+  buildSelect('monthTK', S.timeKeepers, saved.tkName || '');
+}
+function buildSelect(id, arr, savedName) {
+  const el = $(id); if (!el) return;
+  let html = `<option value=""${!savedName ? ' selected' : ''}>(자동으로 이어받기)</option>`;
+  if (arr.length) html += arr.map((n) => `<option value="${esc(n)}"${n === savedName ? ' selected' : ''}>${esc(n)}</option>`).join('');
+  el.innerHTML = html;
+}
+function onMonthSettingChange() {
+  const key = monthKey(S.year, S.month);
+  const p = $('monthPerson').value, sp = $('monthSatPerson').value, tk = $('monthTK').value;
+  if (p || sp || tk) S.monthSettings[key] = { personName: p, satPersonName: sp, tkName: tk };
+  else delete S.monthSettings[key];
+  saveCal(); renderCal();
+}
+
+/* 날짜 유틸 */
+function monthKey(year, month) { return `${year}-${String(month + 1).padStart(2, '0')}`; }
+function addDays(date, n) { const d = new Date(date); d.setDate(d.getDate() + n); return d; }
+function getMondayOf(date) { const d = new Date(date); const dw = d.getDay(); d.setDate(d.getDate() + (dw === 0 ? -6 : 1 - dw)); return d; }
+function countDays(from, to, pred) { let n = 0, d = new Date(from); while (d < to) { if (pred(d)) n++; d.setDate(d.getDate() + 1); } return n; }
+function modIdx(n, len) { return ((n % len) + len) % len; }
+function resolveStartIdx(list, name) { if (!list.length) return 0; const i = list.indexOf(name); return i >= 0 ? i : 0; }
+
+const isRegularMealDay = (d) => ![4, 6].includes(d.getDay()); // 목·토 제외
+const isSatDay = (d) => d.getDay() === 6;
+const isMenuDay = (d) => ![4, 6].includes(d.getDay());
+
+function firstMealDayOfMonth(year, month) { const d = new Date(year, month, 1); while ([4, 6].includes(d.getDay())) d.setDate(d.getDate() + 1); return d; }
+function firstSaturdayOfMonth(year, month) { const d = new Date(year, month, 1); while (d.getDay() !== 6) d.setDate(d.getDate() + 1); return d; }
+function firstWeekMondayOfMonth(year, month) { const d = new Date(year, month, 1); while (d.getDay() !== 4) d.setDate(d.getDate() + 1); return addDays(d, -3); }
+
+function computeMonthStartIdx(people, year, month, depth) {
+  if (!people.length) return 0;
+  if (depth > 24) return 0;
+  const saved = S.monthSettings[monthKey(year, month)];
+  if (saved && saved.personName) return resolveStartIdx(people, saved.personName);
+  const pm = month === 0 ? 11 : month - 1, py = month === 0 ? year - 1 : year;
+  const prev = computeMonthStartIdx(people, py, pm, (depth || 0) + 1);
+  const count = countDays(firstMealDayOfMonth(py, pm), addDays(new Date(year, month, 0), 1), isRegularMealDay);
+  return modIdx(prev + count, people.length);
+}
+function computeMonthSatStartIdx(year, month, depth) {
+  if (!S.satPeople.length) return 0;
+  if (depth > 24) return 0;
+  const saved = S.monthSettings[monthKey(year, month)];
+  if (saved && saved.satPersonName) return resolveStartIdx(S.satPeople, saved.satPersonName);
+  const pm = month === 0 ? 11 : month - 1, py = month === 0 ? year - 1 : year;
+  const prev = computeMonthSatStartIdx(py, pm, (depth || 0) + 1);
+  const count = countDays(firstSaturdayOfMonth(py, pm), addDays(new Date(year, month, 0), 1), isSatDay);
+  return modIdx(prev + count, S.satPeople.length);
+}
+function computeMonthTKStartIdx(year, month, depth) {
+  if (!S.timeKeepers.length) return 0;
+  if (depth > 24) return 0;
+  const saved = S.monthSettings[monthKey(year, month)];
+  if (saved && saved.tkName) return resolveStartIdx(S.timeKeepers, saved.tkName);
+  const pm = month === 0 ? 11 : month - 1, py = month === 0 ? year - 1 : year;
+  const prev = computeMonthTKStartIdx(py, pm, (depth || 0) + 1);
+  const weeks = Math.round((firstWeekMondayOfMonth(year, month) - firstWeekMondayOfMonth(py, pm)) / 604800000);
+  return modIdx(prev + weeks, S.timeKeepers.length);
+}
+
+function personFor(date) {
+  if (date.getDay() === 6) return satPersonFor(date);
+  if (!S.people.length) return null;
+  const y = date.getFullYear(), m = date.getMonth();
+  const startIdx = computeMonthStartIdx(S.people, y, m, 0);
+  const n = countDays(firstMealDayOfMonth(y, m), date, isRegularMealDay);
+  return S.people[modIdx(startIdx + n, S.people.length)];
+}
+function satPersonFor(date) {
+  if (!S.satPeople.length) return null;
+  const y = date.getFullYear(), m = date.getMonth();
+  const startIdx = computeMonthSatStartIdx(y, m, 0);
+  const n = countDays(firstSaturdayOfMonth(y, m), date, isSatDay);
+  return S.satPeople[modIdx(startIdx + n, S.satPeople.length)];
+}
+function menuFor(date) {
+  if (!S.menus.length) return null;
+  const n = countDays(new Date(2000, 0, 1), date, isMenuDay);
+  return S.menus[modIdx(n, S.menus.length)];
+}
+function timekeeperFor(monday) {
+  if (!S.timeKeepers.length) return null;
+  const thursday = addDays(monday, 3);
+  const y = thursday.getFullYear(), m = thursday.getMonth();
+  const startIdx = computeMonthTKStartIdx(y, m, 0);
+  const weeks = Math.round((monday - firstWeekMondayOfMonth(y, m)) / 604800000);
+  return S.timeKeepers[modIdx(startIdx + weeks, S.timeKeepers.length)];
+}
+function formatMenu(menuStr) {
+  const parts = menuStr.split('/').map((s) => s.trim()).filter(Boolean);
+  return parts.filter((v, i) => i === 0 || v !== parts[i - 1]).map((s) => esc(s)).join('<br>');
+}
+
+const MONTHS = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+const DOWS = ['월', '화', '수', '목', '금', '토', '일'];
+function changeMonth(d) {
+  S.month += d;
+  if (S.month > 11) { S.month = 0; S.year++; }
+  if (S.month < 0) { S.month = 11; S.year--; }
+  renderCal();
+}
+function toggleSettings() { $('settingsPanel').classList.toggle('open'); }
+function dayTypeOf(dw) {
+  if (dw === 4) return { key: 'off', label: '휴무' };
+  if (dw === 6) return { key: 'bread', label: '빵식' };
+  if (dw === 0) return { key: 'evening', label: '저녁' };
+  return { key: 'jugan', label: '아침' };
+}
+
+function renderCal() {
+  const mn = S.month + 1;
+  $('monthLabel').textContent = `${S.year}년 ${MONTHS[S.month]}`;
+  $('printTitle').textContent = `${S.year}년 ${mn}월 식번표`;
+  renderSelects();
+
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const lastDay = new Date(S.year, S.month + 1, 0);
+  let html = `<div class="cal-head"><div class="tk-hd">타임키퍼</div>${DOWS.map((d) => `<div>${d}</div>`).join('')}</div>`;
+
+  let wk = getMondayOf(new Date(S.year, S.month, 1));
+  while (wk <= lastDay) {
+    const mon = new Date(wk);
+    const tk = timekeeperFor(mon);
+    let row = `<div class="cal-week"><div class="tk-cell">`;
+    row += tk ? `<div class="tk-lbl">타임키퍼</div><div class="tk-pill">${esc(tk)}</div>` : `<div class="no-tk">-</div>`;
+    row += `</div>`;
+    for (let i = 0; i < 7; i++) {
+      const cd = addDays(mon, i), dw = cd.getDay();
+      const out = cd.getMonth() !== S.month;
+      const type = dayTypeOf(dw);
+      let cls = 'day-cell';
+      if (out) cls += ' outside';
+      if (cd.getTime() === today.getTime()) cls += ' today';
+      if (dw === 0) cls += ' sun-day';
+      if (dw === 6) cls += ' sat-day';
+      if (dw === 4) cls += ' thu';
+      let inner = `<div class="day-num">${cd.getDate()}</div>`;
+      if (!out) {
+        inner += `<div class="meal-badge badge-${type.key}">${type.label}</div>`;
+        if (type.key !== 'off') {
+          const person = personFor(cd);
+          inner += `<div class="meal-person">${person ? `담당: ${esc(person)}` : '<span class="empty-txt">담당없음</span>'}</div>`;
+          if (type.key === 'bread') inner += `<div class="meal-menu">&#127838; 빵식 (고정)</div>`;
+          else { const m = menuFor(cd); inner += `<div class="meal-menu">${m ? formatMenu(m) : '<span class="empty-txt">메뉴없음</span>'}</div>`; }
+        }
+      }
+      row += `<div class="${cls}">${inner}</div>`;
+    }
+    html += row + `</div>`;
+    wk = addDays(wk, 7);
+  }
+  $('calWrap').innerHTML = html;
+}
+
+// 원본 html 의 inline onclick 이 그대로 동작하도록 전역에 노출
+Object.assign(window, {
+  changeMonth, toggleSettings, openExcelImport, handleExcelImport,
+  addPerson, removePerson, addTK, removeTK, addSatPerson, removeSatPerson,
+  moveItem, addMenuEntry, removeMenu, toggleBulk, bulkAddMenus, clearMenus, saveMemo, onMonthSettingChange
+});
+
+/* ═══════════════════════════════════════════════════
+   청소 구역 — board.cleaning = [{ zone, a, b }]  (전부 손으로 정함)
+   ═══════════════════════════════════════════════════ */
+function memberOptions(selected) {
+  return `<option value="">-</option>` +
+    members.map((m) => `<option value="${esc(m.name)}"${m.name === selected ? ' selected' : ''}>${esc(m.name)}</option>`).join('');
+}
+function renderClean() {
+  const list = $('clean-list');
+  const items = board.cleaning || [];
+  if (items.length === 0) {
+    list.innerHTML = '<p class="text-sm text-stone-400 text-center py-6">아직 구역이 없습니다. 아래에서 추가하세요.</p>';
+    return;
+  }
+  const selCls = 'flex-1 min-w-0 border border-stone-200 rounded-lg px-2 py-2 text-sm bg-white focus:outline-none focus:border-stone-400';
+  list.innerHTML = items.map((it, i) => `
+    <div class="flex items-center gap-2 bg-stone-50 rounded-xl px-3 py-2">
+      <span class="font-bold text-sm min-w-[64px] sm:min-w-[96px] truncate" title="${esc(it.zone)}">${esc(it.zone)}</span>
+      <select data-ci="${i}" data-ck="a" class="${selCls}">${memberOptions(it.a)}</select>
+      <select data-ci="${i}" data-ck="b" class="${selCls}">${memberOptions(it.b)}</select>
+      <button data-cdel="${i}" class="w-8 h-8 rounded-full text-stone-300 hover:text-red-500 hover:bg-red-50 flex-shrink-0 transition-colors"><i class="fa-solid fa-xmark pointer-events-none"></i></button>
+    </div>`).join('');
+  list.querySelectorAll('select[data-ci]').forEach((s) => s.addEventListener('change', async () => {
+    const arr = (board.cleaning || []).map((x) => ({ ...x }));
+    arr[+s.dataset.ci][s.dataset.ck] = s.value;
+    await saveClean(arr);
+  }));
+  list.querySelectorAll('[data-cdel]').forEach((b) => b.addEventListener('click', async () => {
+    const arr = (board.cleaning || []).filter((_, i) => i !== +b.dataset.cdel);
+    await saveClean(arr);
+  }));
+}
+async function saveClean(arr) {
+  try { await updateDoc(doc(db, 'boards', boardId), { cleaning: arr, updatedAt: serverTimestamp() }); }
+  catch (e) { showToast('저장 실패: ' + (e.code || e.message), 'error'); }
+}
+$('btn-clean-add').addEventListener('click', async () => {
+  const el = $('clean-zone-input'); const v = el.value.trim();
+  if (!v) { el.focus(); return; }
+  await saveClean([...(board.cleaning || []), { zone: v, a: '', b: '' }]);
+  el.value = ''; el.focus();
+});
+$('clean-zone-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btn-clean-add').click(); });
+$('btn-clean-copy').addEventListener('click', async () => {
+  const items = board.cleaning || [];
+  if (!items.length) { showToast('복사할 내용이 없습니다.', 'error'); return; }
+  const text = `[청소 구역]\n` + items.map((it) => `${it.zone}: ${[it.a, it.b].filter(Boolean).join(', ') || '-'}`).join('\n') + '\n';
+  const ok = await copyText(text);
+  showToast(ok ? '복사했습니다.' : '복사에 실패했습니다.', ok ? 'success' : 'error');
+});
+
+/* ═══════════════════════════════════════════════════
+   리딩표 — boards/{id}/reading/{YYYY-MM} = { <memberId>: { <day>: 장수 } }
+   ═══════════════════════════════════════════════════ */
+let R = { year: new Date().getFullYear(), month: new Date().getMonth(), all: {} };   // all[YYYY-MM] = { memberId: { day: n } }
+const readRef = () => doc(db, 'boards', boardId, 'reading', monthKey(R.year, R.month));
+
+function startReading() {
+  onSnapshot(collection(db, 'boards', boardId, 'reading'), (snap) => {
+    R.all = {};
+    snap.docs.forEach((d) => { R.all[d.id] = d.data(); });
+    renderRead();
+  }, (e) => showToast('리딩표 불러오기 실패: ' + (e.code || e.message), 'error'));
+}
+$('read-prev').addEventListener('click', () => { R.month--; if (R.month < 0) { R.month = 11; R.year--; } renderRead(); });
+$('read-next').addEventListener('click', () => { R.month++; if (R.month > 11) { R.month = 0; R.year++; } renderRead(); });
+
+function sumRec(rec) { return Object.values(rec || {}).reduce((s, v) => s + (Number(v) || 0), 0); }
+
+// 월별 합산 + 누적 표 (매달 장수 기준으로 시상하므로 월 단위 합계와 누적을 같이 보여준다)
+function renderReadSummary() {
+  const box = $('read-summary');
+  const monthKeys = Object.keys(R.all).sort();
+  if (members.length === 0 || monthKeys.length === 0) { box.innerHTML = ''; return; }
+  const rows = members.map((m) => {
+    const per = monthKeys.map((k) => sumRec((R.all[k] || {})[m.id]));
+    return { name: m.name, id: m.id, per, total: per.reduce((a, b) => a + b, 0) };
+  }).sort((a, b) => b.total - a.total);
+  const curKey = monthKey(R.year, R.month);
+  let html = `<h3 class="text-sm font-bold text-stone-700 mt-6 mb-2">월별 합산 · 누적</h3>
+    <div class="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0"><table class="read-table"><tr><th class="name">이름</th>`;
+  html += monthKeys.map((k) => `<th class="${k === curKey ? 'today' : ''}" style="min-width:52px">${k.slice(2).replace('-', '.')}</th>`).join('');
+  html += `<th style="min-width:56px">누적</th></tr>`;
+  html += rows.map((r) => `<tr class="${r.id === me ? 'me' : ''}"><td class="name">${esc(r.name)}</td>` +
+    r.per.map((v, i) => `<td class="${v ? 'has' : ''}${monthKeys[i] === curKey ? ' today' : ''}">${v || ''}</td>`).join('') +
+    `<td class="total">${r.total || ''}</td></tr>`).join('');
+  html += `</table></div><p class="text-xs text-stone-400 mt-2">누적이 많은 순서입니다.</p>`;
+  box.innerHTML = html;
+}
+
+function renderRead() {
+  R.data = R.all[monthKey(R.year, R.month)] || {};
+  renderReadSummary();
+  $('read-month').textContent = `${R.year}년 ${R.month + 1}월`;
+  const mine = myMember();
+  $('read-hint').innerHTML = mine
+    ? `<b>${esc(mine.name)}</b> 줄의 칸을 누르면 그날 읽은 장수를 적을 수 있습니다.`
+    : `오른쪽 위 <b>내 이름</b>을 먼저 골라야 내 줄을 적을 수 있습니다.`;
+
+  const table = $('read-table');
+  if (members.length === 0) {
+    table.innerHTML = '<tr><td class="text-stone-400 py-6 px-4 text-sm">기도제목 탭에서 형제를 먼저 추가해 주세요.</td></tr>';
+    return;
+  }
+  const days = new Date(R.year, R.month + 1, 0).getDate();
+  const today = new Date();
+  const isThisMonth = today.getFullYear() === R.year && today.getMonth() === R.month;
+  const SUN = ['일', '월', '화', '수', '목', '금', '토'];
+
+  let head = '<tr><th class="name">이름</th>';
+  for (let d = 1; d <= days; d++) {
+    const dw = new Date(R.year, R.month, d).getDay();
+    const cls = [dw === 0 ? 'sun' : '', dw === 6 ? 'sat' : '', isThisMonth && today.getDate() === d ? 'today' : ''].join(' ');
+    head += `<th class="${cls}">${d}<br><span style="font-weight:400;font-size:10px">${SUN[dw]}</span></th>`;
+  }
+  head += '<th>합계</th></tr>';
+
+  const rows = members.map((m) => {
+    const rec = R.data[m.id] || {};
+    const isMe = m.id === me;
+    let total = 0, tds = '';
+    for (let d = 1; d <= days; d++) {
+      const v = Number(rec[d]) || 0;
+      total += v;
+      const td = isThisMonth && today.getDate() === d ? ' today' : '';
+      tds += `<td class="cell${v ? ' has' : ''}${td}" data-day="${d}">${v || ''}</td>`;
+    }
+    return `<tr class="${isMe ? 'me' : ''}" data-mid="${esc(m.id)}"><td class="name">${esc(m.name)}</td>${tds}<td class="total">${total || ''}</td></tr>`;
+  }).join('');
+  table.innerHTML = head + rows;
+
+  const meRow = table.querySelector('tr.me');
+  if (meRow) meRow.querySelectorAll('td.cell').forEach((td) => td.addEventListener('click', () => editReading(+td.dataset.day)));
+}
+
+async function editReading(day) {
+  const mine = myMember(); if (!mine) return;
+  const cur = (R.data[me] || {})[day] || '';
+  const raw = prompt(`${R.month + 1}월 ${day}일 읽은 장수`, cur);
+  if (raw === null) return;
+  const n = parseInt(raw, 10);
+  const value = (!raw.trim() || isNaN(n) || n <= 0) ? deleteField() : n;
+  try { await setDoc(readRef(), { [me]: { [String(day)]: value } }, { merge: true }); }
+  catch (e) { showToast('저장 실패: ' + (e.code || e.message), 'error'); }
+}
+
+/* ═══════════════════════════════════════════════════
+   마음의 편지 — boards/{id}/letters (익명, 전원 열람)
+   ═══════════════════════════════════════════════════ */
+function startLetters() {
+  onSnapshot(query(collection(db, 'boards', boardId, 'letters'), orderBy('createdAt', 'desc')), (snap) => {
+    const list = $('letter-list');
+    if (snap.empty) { list.innerHTML = '<p class="text-sm text-stone-400 text-center py-8">아직 편지가 없습니다.</p>'; return; }
+    list.innerHTML = snap.docs.map((d) => {
+      const a = d.data();
+      const t = a.createdAt && a.createdAt.toDate ? a.createdAt.toDate() : null;
+      const when = t ? `${t.getFullYear()}.${String(t.getMonth() + 1).padStart(2, '0')}.${String(t.getDate()).padStart(2, '0')}` : '방금';
+      return `<div class="bg-white rounded-2xl p-5 shadow-sm border border-stone-200">
+        <p class="text-sm text-stone-800 leading-relaxed whitespace-pre-wrap">${esc(a.text)}</p>
+        <p class="text-xs text-stone-400 mt-3">${when}</p>
+      </div>`;
+    }).join('');
+  }, (e) => showToast('편지 불러오기 실패: ' + (e.code || e.message), 'error'));
+}
+$('btn-letter-send').addEventListener('click', async () => {
+  const el = $('letter-input'); const text = el.value.trim();
+  if (!text) { el.focus(); return; }
+  const btn = $('btn-letter-send'); btn.disabled = true;
+  try {
+    await addDoc(collection(db, 'boards', boardId, 'letters'), { text, createdAt: serverTimestamp() });
+    el.value = ''; showToast('보냈습니다.');
+  } catch (e) { showToast('보내기 실패: ' + (e.code || e.message), 'error'); }
+  finally { btn.disabled = false; }
+});
+
+/* ═══════════════════════════════════════════════════
+   기도제목 (기도제목보드 그대로)
+   ═══════════════════════════════════════════════════ */
+const AVATAR = ['bg-blue-100 text-blue-700', 'bg-emerald-100 text-emerald-700',
+                'bg-amber-100 text-amber-700', 'bg-rose-100 text-rose-700', 'bg-purple-100 text-purple-700'];
+
+function renderCards() {
+  const grid = $('prayer-grid');
+  grid.innerHTML = '';
+  if (members.length === 0) {
+    grid.innerHTML = `<div class="col-span-full py-16 text-center text-stone-500">
+      <i class="fa-solid fa-users text-4xl mb-3 text-stone-300 block"></i>
+      <p>아직 아무도 없습니다. '형제 추가'를 눌러 시작하세요.</p></div>`;
+    return;
+  }
+  members.forEach((member) => {
+    const card = document.createElement('div');
+    card.className = 'bg-white rounded-2xl p-6 shadow-sm border border-stone-200 card-hover flex flex-col h-full';
+    const color = AVATAR[(member.name || '?').charCodeAt(0) % AVATAR.length];
+    const reqs = (member.requests || []).filter((r) => r && r.trim());
+    const items = reqs.map((req, i) => `
+      <li class="flex items-start gap-3 mt-3 first:mt-0 pb-3 border-b border-stone-100 last:border-0 last:pb-0">
+        <span class="w-5 h-5 rounded-full bg-stone-100 text-stone-600 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">${i + 1}</span>
+        <span class="text-sm text-stone-700 leading-relaxed whitespace-pre-wrap">${esc(req)}</span>
+      </li>`).join('');
+    card.innerHTML = `
+      <div class="flex justify-between items-center mb-5 pb-4 border-b border-stone-100">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-10 h-10 rounded-full ${color} flex items-center justify-center font-bold text-lg flex-shrink-0">${esc((member.name || '?').charAt(0))}</div>
+          <h2 class="text-lg font-bold text-stone-800 truncate">${esc(member.name)}</h2>
+        </div>
+        <button data-edit="${esc(member.id)}" class="w-8 h-8 rounded-full bg-stone-50 hover:bg-amber-100 text-stone-400 hover:text-amber-600 flex items-center justify-center transition-colors flex-shrink-0">
+          <i class="fa-solid fa-pen text-sm pointer-events-none"></i>
+        </button>
+      </div>
+      <div class="flex-grow"><ul>${items || '<li class="text-sm text-stone-400 italic text-center py-4">아직 기도제목이 없습니다.</li>'}</ul></div>`;
+    grid.appendChild(card);
+  });
+  grid.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => openEditModal(b.getAttribute('data-edit'))));
+}
+
+let deleteArmed = false;
+function reqRow(value = '') {
+  const wrap = document.createElement('div');
+  wrap.className = 'flex items-start gap-2';
+  const ta = document.createElement('textarea');
+  ta.rows = 2; ta.value = value; ta.maxLength = 300;
+  ta.placeholder = '예) 매일 아침 말씀 묵상의 자리를 지키게 하소서.';
+  ta.className = 'flex-grow border border-stone-200 rounded-lg px-3.5 py-2.5 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-stone-800/10 focus:border-stone-400';
+  const del = document.createElement('button');
+  del.type = 'button';
+  del.className = 'w-8 h-9 rounded-lg text-stone-300 hover:text-red-500 hover:bg-red-50 flex-shrink-0 transition-colors';
+  del.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+  del.addEventListener('click', () => wrap.remove());
+  wrap.append(ta, del);
+  return wrap;
+}
+function openAddModal() {
+  $('edit-id').value = ''; $('edit-name').value = ''; $('req-list').innerHTML = '';
+  for (let i = 0; i < 3; i++) $('req-list').appendChild(reqRow());
+  $('modal-title').textContent = '새 형제 추가';
+  hide($('btn-delete'));
+  openModal($('edit-modal'));
+  setTimeout(() => $('edit-name').focus(), 220);
+}
+function openEditModal(id) {
+  const m = members.find((x) => x.id === id); if (!m) return;
+  $('edit-id').value = id; $('edit-name').value = m.name || ''; $('req-list').innerHTML = '';
+  const reqs = (m.requests && m.requests.length) ? m.requests : ['', '', ''];
+  reqs.forEach((r) => $('req-list').appendChild(reqRow(r)));
+  while ($('req-list').children.length < 3) $('req-list').appendChild(reqRow());
+  $('modal-title').textContent = `${m.name} 형제 기도제목`;
+  show($('btn-delete')); resetDeleteButton();
+  openModal($('edit-modal'));
+}
+function resetDeleteButton() {
+  deleteArmed = false;
+  $('btn-delete').textContent = '삭제';
+  $('btn-delete').className = 'text-sm px-3.5 py-2.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors';
+}
+async function saveChanges() {
+  const id = $('edit-id').value;
+  const name = $('edit-name').value.trim();
+  const requests = [...$('req-list').querySelectorAll('textarea')].map((t) => t.value.trim()).filter((v) => v !== '');
+  if (!name) { showToast('이름을 입력해 주세요.', 'error'); $('edit-name').focus(); return; }
+  const btn = $('btn-save'); btn.disabled = true; btn.textContent = '저장 중…';
+  try {
+    if (id) {
+      await updateDoc(doc(db, 'boards', boardId, 'members', id), { name, requests, updatedAt: serverTimestamp() });
+      showToast('수정되었습니다.');
+    } else {
+      await addDoc(collection(db, 'boards', boardId, 'members'), { name, requests, order: Date.now(), createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+      showToast('새 형제가 추가되었습니다.');
+    }
+    closeModal($('edit-modal'));
+  } catch (e) { showToast('저장 실패: ' + (e.code || e.message), 'error'); }
+  finally { btn.disabled = false; btn.textContent = '저장'; }
+}
+async function deleteMember() {
+  const id = $('edit-id').value; if (!id) return;
+  if (!deleteArmed) {
+    deleteArmed = true;
+    $('btn-delete').textContent = '정말 삭제할까요? 다시 누르세요';
+    $('btn-delete').className = 'text-sm px-3.5 py-2.5 rounded-lg bg-red-600 text-white transition-colors';
+    setTimeout(resetDeleteButton, 4000);
+    return;
+  }
+  try { await deleteDoc(doc(db, 'boards', boardId, 'members', id)); showToast('삭제되었습니다.'); closeModal($('edit-modal')); }
+  catch (e) { showToast('삭제 실패: ' + (e.code || e.message), 'error'); }
+}
+
+function buildKakaoText(list = members, label = $('week-indicator').textContent) {
+  let out = `[${label}]\n\n`;
+  list.forEach((m) => {
+    out += `🙏 ${m.name}\n`;
+    (m.requests || []).forEach((r, i) => { if (r && r.trim()) out += `${i + 1}. ${r}\n`; });
+    out += `\n`;
+  });
+  return out.trimEnd() + '\n';
+}
+function buildMarkdown() {
+  const label = $('week-indicator').textContent;
+  const today = new Date().toISOString().slice(0, 10);
+  let out = `# ${$('board-title').textContent} 기도제목\n\n**${label}** · 정리일 ${today}\n\n`;
+  members.forEach((m) => {
+    out += `## ${m.name}\n\n`;
+    const reqs = (m.requests || []).filter((r) => r && r.trim());
+    if (reqs.length === 0) out += `_기도제목 없음_\n\n`;
+    else reqs.forEach((r, i) => { out += `${i + 1}. ${r}\n`; });
+    out += `\n`;
+  });
+  return out;
+}
+function downloadMd() {
+  const name = `${autoWeek().key}_기도제목.md`;
+  const blob = new Blob(['﻿' + buildMarkdown()], { type: 'text/markdown;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  showToast(`${name} 로 저장했습니다.`);
+}
+async function saveWeek() {
+  if (members.length === 0) { showToast('보관할 내용이 없습니다.', 'error'); return; }
+  const w = autoWeek(); const label = $('week-indicator').textContent;
+  try {
+    await setDoc(doc(db, 'boards', boardId, 'archives', w.key), {
+      label, savedAt: serverTimestamp(), sortKey: w.key,
+      members: members.map((m) => ({ name: m.name, requests: (m.requests || []).filter((r) => r && r.trim()) }))
+    });
+    showToast(`'${label}' 로 보관했습니다.`);
+  } catch (e) { showToast('보관 실패: ' + (e.code || e.message), 'error'); }
+}
+async function openArchives() {
+  const body = $('arch-body');
+  body.innerHTML = '<p class="text-stone-400 py-8 text-center">불러오는 중…</p>';
+  openModal($('arch-modal'));
+  try {
+    const snap = await getDocs(query(collection(db, 'boards', boardId, 'archives'), orderBy('sortKey', 'desc')));
+    if (snap.empty) { body.innerHTML = `<p class="text-stone-400 py-8 text-center leading-relaxed">아직 보관된 주차가 없습니다.<br>'이번 주 보관'을 누르면 여기에 쌓입니다.</p>`; return; }
+    body.innerHTML = '';
+    snap.docs.forEach((d) => {
+      const a = d.data();
+      const box = document.createElement('div');
+      box.className = 'border border-stone-200 rounded-xl mb-2 overflow-hidden';
+      const inner = (a.members || []).map((m) => {
+        const rs = (m.requests || []).map((r, i) => `<li class="pl-1">${i + 1}. ${esc(r)}</li>`).join('');
+        return `<div class="mb-3"><p class="font-bold text-stone-800">🙏 ${esc(m.name)}</p><ul class="text-stone-600 leading-relaxed mt-1">${rs}</ul></div>`;
+      }).join('');
+      box.innerHTML = `
+        <button class="w-full text-left px-4 py-3 hover:bg-stone-50 flex items-center justify-between transition-colors">
+          <span class="font-medium">${esc(a.label || d.id)}</span>
+          <span class="text-xs text-stone-400">${(a.members || []).length}명 <i class="fa-solid fa-chevron-down ml-1"></i></span>
+        </button>
+        <div class="px-4 pb-4 pt-1 bg-stone-50/60 border-t border-stone-100" hidden>
+          ${inner}
+          <button class="text-xs px-3 py-1.5 rounded-lg bg-white border border-stone-200 hover:bg-stone-100 transition-colors"><i class="fa-regular fa-copy mr-1"></i>이 주차 복사</button>
+        </div>`;
+      const [toggle, panel] = [box.children[0], box.children[1]];
+      toggle.addEventListener('click', () => panel.hasAttribute('hidden') ? show(panel) : hide(panel));
+      panel.querySelector('button').addEventListener('click', async () => {
+        const ok = await copyText(buildKakaoText(a.members || [], a.label || d.id));
+        showToast(ok ? '복사했습니다.' : '복사에 실패했습니다.', ok ? 'success' : 'error');
+      });
+      body.appendChild(box);
+    });
+  } catch (e) { body.innerHTML = `<p class="text-red-600 py-8 text-center">${esc(e.code || e.message)}</p>`; }
+}
+
+$('btn-add').addEventListener('click', openAddModal);
+$('btn-save').addEventListener('click', saveChanges);
+$('btn-cancel').addEventListener('click', () => closeModal($('edit-modal')));
+$('btn-delete').addEventListener('click', deleteMember);
+$('btn-add-req').addEventListener('click', () => $('req-list').appendChild(reqRow()));
+$('edit-modal').addEventListener('click', (e) => { if (e.target === $('edit-modal')) closeModal($('edit-modal')); });
+$('btn-copy').addEventListener('click', async () => {
+  if (members.length === 0) { showToast('복사할 내용이 없습니다.', 'error'); return; }
+  const ok = await copyText(buildKakaoText());
+  showToast(ok ? '복사했습니다. 카톡에 붙여넣기 하세요!' : '복사에 실패했습니다.', ok ? 'success' : 'error');
+});
+$('btn-md').addEventListener('click', downloadMd);
+$('btn-save-week').addEventListener('click', saveWeek);
+$('btn-archive-list').addEventListener('click', openArchives);
+$('arch-close').addEventListener('click', () => closeModal($('arch-modal')));
+$('arch-modal').addEventListener('click', (e) => { if (e.target === $('arch-modal')) closeModal($('arch-modal')); });
+
+/* ── 링크 공유 ── */
+$('btn-share').addEventListener('click', () => {
+  $('share-url').value = location.href.replace(/#.*$/, '') + `#/b/${boardId}`;
+  openModal($('share-modal'));
+});
+$('share-copy').addEventListener('click', async () => {
+  const ok = await copyText($('share-url').value);
+  showToast(ok ? '링크를 복사했습니다.' : '복사에 실패했습니다.', ok ? 'success' : 'error');
+});
+$('share-close').addEventListener('click', () => closeModal($('share-modal')));
+$('share-modal').addEventListener('click', (e) => { if (e.target === $('share-modal')) closeModal($('share-modal')); });
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  [$('edit-modal'), $('arch-modal'), $('share-modal'), $('me-modal')].forEach((m) => { if (!m.hasAttribute('hidden')) closeModal(m); });
+});
+
+/* ── 시작 (모든 정의가 끝난 뒤) ── */
+if (boardId) startBoard(route.tab);
+</script>
+</body>
+</html>
