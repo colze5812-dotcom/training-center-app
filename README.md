@@ -26,11 +26,13 @@
 
 ## 처음 올릴 때 할 일
 
-1. **규칙 게시** — Firebase 콘솔 → `prayer-requests-9d290` → Firestore Database → 규칙 탭 →
+1. **규칙 게시** — 2026-10-12 게시 완료. 다시 바꿀 때: Firebase 콘솔 → `prayer-requests-9d290` → Firestore Database → 규칙 탭 →
    이 폴더 `firestore.rules` 내용 전체를 붙여넣고 **게시**.
    (기도제목보드는 `members`·`archives` 두 하위 컬렉션만 열어 뒀는데, 이 앱은 `calendar`·`reading`·`letters`도 쓰므로
    `boards/{id}` 아래 전부를 여는 것으로 바꿨다. 암송카드앱 규칙은 그대로.)
-2. **GitHub Pages 에 올리기** — 이 폴더 3개 파일을 저장소에 올린다.
+2. **GitHub Pages** — 올라가 있다. 저장소 `colze5812-dotcom/training-center-app`, 주소
+   **<https://colze5812-dotcom.github.io/training-center-app/>**
+   고칠 때는 이 폴더에서 `git add . && git commit && git push` (자격증명은 git에 저장돼 있음).
 3. **기존 기도제목 이어 쓰기** — 기존 기도제목보드 링크의 `#/b/긴문자열` 부분을 새 주소 뒤에 그대로 붙이면
    형제 목록과 기도제목이 그대로 나온다. 새로 만들 필요 없다.
    처음 시작하는 거면 주소로 들어가 **새로 만들기**를 한 번만 누른다.
