@@ -7,7 +7,6 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
          -webkit-text-size-adjust: 100%; }
@@ -32,109 +31,42 @@
   .read-table td.has { color: #1c1917; font-weight: 600; }
   .read-table td.total { background: #f5f5f4; font-weight: 700; }
 
-  /* ── 캘린더 (식단표 & 식번 달력 원본 스타일, #tab-cal 안에서만 적용) ── */
-  #tab-cal .print-title { display: none; text-align: center; font-size: 1.5rem; font-weight: 700; padding: 12px 0 10px; color: #1a202c; }
-  #tab-cal .header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-      background: linear-gradient(135deg, #1a3f7a 0%, #2563eb 100%);
-      color: white; padding: 14px 22px; border-radius: 14px; margin-bottom: 12px; }
-  #tab-cal .header h1 { font-size: 1.25rem; flex: 1; min-width: 140px; font-weight: 700; }
-  #tab-cal .month-nav { display: flex; align-items: center; gap: 10px; }
-  #tab-cal .month-nav button { background: rgba(255,255,255,0.18); border: none; color: white;
-      width: 30px; height: 30px; border-radius: 8px; cursor: pointer; font-size: 0.95rem; }
-  #tab-cal .month-nav button:hover { background: rgba(255,255,255,0.32); }
-  #tab-cal .month-nav .lbl { font-size: 1.05rem; font-weight: 700; min-width: 96px; text-align: center; }
-  #tab-cal .header-btns { display: flex; gap: 7px; }
-  #tab-cal .btn { padding: 7px 14px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.82rem; font-weight: 700; }
-  #tab-cal .btn-white { background: rgba(255,255,255,0.92); color: #1a3f7a; }
-  #tab-cal .btn-gray  { background: rgba(255,255,255,0.22); color: white; }
-  #tab-cal .btn:hover { opacity: 0.85; }
-  #tab-cal .settings-panel { background: white; border-radius: 14px; padding: 18px; margin-bottom: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); display: none; }
-  #tab-cal .settings-panel.open { display: block; }
-  #tab-cal .s-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 18px; }
-  #tab-cal .s-sec h3 { font-size: 0.86rem; font-weight: 700; color: #1a3f7a; margin-bottom: 9px; padding-bottom: 5px; border-bottom: 2px solid #dbeafe; }
-  #tab-cal .person-list { display: flex; flex-direction: column; gap: 1px; max-height: 150px; overflow-y: auto;
-      border: 1px solid #e2e8f0; border-radius: 8px; padding: 4px 6px; margin-bottom: 7px; background: #fafafa; }
-  #tab-cal .person-row { display: flex; align-items: center; gap: 3px; padding: 3px 2px; border-bottom: 1px solid #f1f5f9; font-size: 0.8rem; }
-  #tab-cal .person-row:last-child { border-bottom: none; }
-  #tab-cal .person-row .p-num  { color: #94a3b8; font-size: 0.7rem; min-width: 18px; }
-  #tab-cal .person-row .p-name { flex: 1; color: #1a202c; }
-  #tab-cal .person-row .mv { cursor: pointer; color: #94a3b8; background: none; border: none; font-size: 0.8rem; padding: 1px 4px; border-radius: 3px; line-height: 1; }
-  #tab-cal .person-row .mv:hover { background: #e2e8f0; color: #4a5568; }
-  #tab-cal .person-row .mv:disabled { opacity: 0.2; cursor: default; }
-  #tab-cal .person-row .x { cursor: pointer; color: #ef4444; font-weight: 900; font-size: 0.82rem; padding: 0 2px; }
-  #tab-cal .btn-excel { font-size: 0.75rem; color: #059669; background: #ecfdf5; border: 1px solid #6ee7b7; border-radius: 6px;
-      padding: 4px 9px; cursor: pointer; font-weight: 600; margin-bottom: 5px; }
-  #tab-cal .btn-excel:hover { background: #d1fae5; }
-  #tab-cal .menu-scroll { display: flex; flex-direction: column; gap: 2px; max-height: 180px; overflow-y: auto;
-      border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 8px; margin-bottom: 7px; background: #fafafa; }
-  #tab-cal .menu-row { display: flex; align-items: center; gap: 4px; padding: 2px 0; border-bottom: 1px solid #f1f5f9; font-size: 0.8rem; }
-  #tab-cal .menu-row:last-child { border-bottom: none; }
-  #tab-cal .menu-row .m-num { color: #94a3b8; font-size: 0.7rem; min-width: 22px; }
-  #tab-cal .menu-row .m-name { flex: 1; color: #1a202c; }
-  #tab-cal .menu-row .x { cursor: pointer; color: #ef4444; font-weight: 900; font-size: 0.82rem; padding: 0 2px; }
-  #tab-cal .menu-count { font-size: 0.72rem; color: #94a3b8; margin-bottom: 5px; }
-  #tab-cal .bulk-toggle { font-size: 0.75rem; color: #3b82f6; cursor: pointer; text-decoration: underline; margin-bottom: 5px; display: inline-block; }
-  #tab-cal .bulk-area { display: none; margin-bottom: 6px; }
-  #tab-cal .bulk-area.open { display: block; }
-  #tab-cal .bulk-area textarea { width: 100%; height: 90px; padding: 6px 8px; border: 1px solid #cbd5e0; border-radius: 8px;
-      font-family: inherit; font-size: 0.8rem; resize: vertical; margin-bottom: 4px; }
-  #tab-cal .btn-bulk { background: #3b82f6; color: white; padding: 4px 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.78rem; font-weight: 700; }
-  #tab-cal .add-row { display: flex; gap: 5px; }
-  #tab-cal .add-row input { flex: 1; min-width: 0; padding: 5px 9px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 0.82rem; font-family: inherit; }
-  #tab-cal .add-row input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px #bfdbfe; }
-  #tab-cal .btn-add { background: #22c55e; color: white; padding: 5px 11px; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.82rem; }
-  #tab-cal .s-field { margin-bottom: 8px; }
-  #tab-cal .s-field label { display: block; font-size: 0.78rem; color: #64748b; margin-bottom: 2px; }
-  #tab-cal .s-field input, #tab-cal .s-field select { width: 100%; padding: 5px 9px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 0.82rem; font-family: inherit; background: white; }
-  #tab-cal .cal-wrap { background: white; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
-  #tab-cal .cal-head { display: grid; grid-template-columns: 70px repeat(7, 1fr); background: #1a3f7a; color: white; }
-  #tab-cal .cal-head > div { padding: 9px 4px; text-align: center; font-size: 0.83rem; font-weight: 700; }
-  #tab-cal .cal-head .tk-hd { background: #122d5c; font-size: 0.74rem; }
-  #tab-cal .cal-week { display: grid; grid-template-columns: 70px repeat(7, 1fr); border-bottom: 1px solid #e2e8f0; }
-  #tab-cal .cal-week:last-child { border-bottom: none; }
-  #tab-cal .tk-cell { padding: 8px 5px; background: #f8fafc; border-right: 1px solid #e2e8f0;
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
-  #tab-cal .tk-cell .tk-lbl { font-size: 0.62rem; color: #94a3b8; letter-spacing: 0.04em; }
-  #tab-cal .tk-pill { background: #fef3c7; border: 1px solid #fcd34d; color: #92400e; padding: 3px 7px; border-radius: 12px; font-size: 0.76rem; font-weight: 700; text-align: center; }
-  #tab-cal .no-tk { font-size: 0.7rem; color: #d1d5db; }
-  #tab-cal .day-cell { padding: 7px 6px; border-right: 1px solid #e2e8f0; min-height: 108px; }
-  #tab-cal .day-cell:last-child { border-right: none; }
-  #tab-cal .day-cell.outside { background: #fafafa; }
-  #tab-cal .day-cell.today   { background: #eff6ff; }
-  #tab-cal .day-cell.thu     { background: #f8f8f8; }
-  #tab-cal .day-num { font-size: 0.83rem; font-weight: 700; margin-bottom: 5px; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; }
-  #tab-cal .today .day-num   { background: #2563eb; color: white; }
-  #tab-cal .outside .day-num { color: #d1d5db; }
-  #tab-cal .sun-day:not(.outside) .day-num { color: #dc2626; }
-  #tab-cal .sat-day:not(.outside) .day-num { color: #2563eb; }
-  #tab-cal .meal-badge { font-size: 0.67rem; font-weight: 700; padding: 2px 6px; border-radius: 10px; display: inline-block; margin-bottom: 4px; }
-  #tab-cal .badge-jugan   { background: #dcfce7; color: #15803d; }
-  #tab-cal .badge-bread   { background: #fef3c7; color: #b45309; }
-  #tab-cal .badge-evening { background: #fee2e2; color: #b91c1c; }
-  #tab-cal .badge-off     { background: #f1f5f9; color: #94a3b8; }
-  #tab-cal .meal-person { font-size: 0.78rem; font-weight: 700; color: #1a3f7a; margin-bottom: 2px; }
-  #tab-cal .meal-menu   { font-size: 0.73rem; color: #64748b; line-height: 1.5; }
-  #tab-cal .empty-txt   { font-size: 0.7rem; color: #d1d5db; }
-  #tab-cal .memo-section { background: white; border-radius: 14px; padding: 16px; margin-top: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
-  #tab-cal .memo-label { font-size: 0.86rem; font-weight: 700; color: #1a3f7a; margin-bottom: 8px; padding-bottom: 5px; border-bottom: 2px solid #dbeafe; }
-  #tab-cal #memoInput { width: 100%; min-height: 100px; padding: 10px; border: 1px solid #cbd5e0; border-radius: 8px; font-family: inherit; font-size: 0.85rem; resize: vertical; line-height: 1.6; }
-  #tab-cal #memoPrint { display: none; white-space: pre-wrap; font-size: 0.85rem; line-height: 1.6; padding: 8px 0; }
-  @media (max-width: 680px) {
-    #tab-cal .cal-head  { grid-template-columns: 46px repeat(7, 1fr); }
-    #tab-cal .cal-week  { grid-template-columns: 46px repeat(7, 1fr); }
-    #tab-cal .day-cell  { padding: 4px; min-height: 80px; }
-    #tab-cal .meal-person, #tab-cal .meal-menu { font-size: 0.65rem; }
-    #tab-cal .tk-pill   { font-size: 0.68rem; padding: 2px 5px; }
-  }
-  @page { margin: 1.2cm; }
-  @media print {
-    html, body { background: white; }
-    #app-header, #tab-cal .header, #tab-cal .settings-panel, #toast-container { display: none !important; }
-    main { padding: 0 !important; max-width: 100% !important; }
-    #tab-cal .print-title { display: block; }
-    #tab-cal .cal-wrap, #tab-cal .memo-section { border-radius: 0; box-shadow: none; page-break-inside: avoid; }
-    #tab-cal #memoInput { display: none; }
-    #tab-cal #memoPrint { display: block; }
+  /* ── 캘린더 ── */
+  .cal-grid { display: grid; grid-template-columns: 52px repeat(7, 1fr); border: 1px solid #e7e5e4; border-radius: 12px; overflow: hidden; font-size: 12px; }
+  .cal-grid > div { border-right: 1px solid #e7e5e4; border-bottom: 1px solid #e7e5e4; min-height: 62px; padding: 4px 3px; }
+  .cal-grid > div:nth-child(8n) { border-right: none; }
+  .cal-hd { background: #f5f5f4; font-weight: 600; text-align: center; min-height: auto !important; padding: 6px 2px !important; color: #57534e; }
+  .cal-hd.sun { color: #dc2626; } .cal-hd.sat { color: #2563eb; }
+  .cal-tk { background: #fafaf9; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; }
+  .cal-tk:hover { background: #f5f5f4; }
+  .cal-tk .lbl { font-size: 10px; color: #a8a29e; }
+  .tk-pill { background: #fef3c7; color: #92400e; border-radius: 10px; padding: 2px 6px; font-weight: 700; font-size: 11px; text-align: center; word-break: keep-all; }
+  .cal-day { cursor: pointer; }
+  .cal-day:hover { background: #fafaf9; }
+  .cal-day.out { background: #fafaf9; cursor: default; }
+  .cal-day.out .dn { color: #d6d3d1; }
+  .cal-day.off { background: #f5f5f4; cursor: default; }
+  .cal-day.off .off-lbl { font-size: 10px; color: #a8a29e; }
+  .cal-day.today { background: #eff6ff; }
+  .cal-day.today .dn { background: #1c1917; color: #fff; }
+  .cal-day.sun .dn { color: #dc2626; } .cal-day.sat .dn { color: #2563eb; }
+  .dn { display: inline-flex; width: 20px; height: 20px; border-radius: 50%; align-items: center; justify-content: center; font-weight: 700; margin-bottom: 2px; }
+  .who { font-weight: 600; color: #1c1917; word-break: keep-all; line-height: 1.3; }
+  .who.ov { color: #b45309; }
+  .who.none { color: #d6d3d1; font-weight: 400; }
+  .cal-list { border: 1px solid #e7e5e4; border-radius: 10px; background: #fafaf9; padding: 4px 6px; margin-bottom: 6px; max-height: 170px; overflow-y: auto; }
+  .cal-row { display: flex; align-items: center; gap: 4px; padding: 3px 2px; border-bottom: 1px solid #f5f5f4; font-size: 13px; }
+  .cal-row:last-child { border-bottom: none; }
+  .cal-row .n { color: #a8a29e; font-size: 11px; min-width: 16px; }
+  .cal-row .nm { flex: 1; }
+  .cal-row button { color: #a8a29e; padding: 2px 5px; border-radius: 4px; font-size: 12px; line-height: 1; }
+  .cal-row button:hover { background: #e7e5e4; color: #44403c; }
+  .cal-row button:disabled { opacity: .2; }
+  .cal-row button.x { color: #ef4444; font-weight: 900; }
+  @media (max-width: 480px) {
+    .cal-grid { grid-template-columns: 44px repeat(7, 1fr); font-size: 11px; }
+    .cal-grid > div { min-height: 54px; padding: 3px 2px; }
+    .tk-pill { font-size: 10px; padding: 2px 4px; }
   }
 </style>
 </head>
@@ -203,91 +135,63 @@
 
     <!-- ── 캘린더 ── -->
     <div id="tab-cal" class="tab" hidden>
-      <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleExcelImport(event)">
-      <div class="print-title" id="printTitle"></div>
-      <div class="header">
-        <h1>식단표 &amp; 식번 달력</h1>
-        <div class="month-nav">
-          <button onclick="changeMonth(-1)">&#9664;</button>
-          <span class="lbl" id="monthLabel"></span>
-          <button onclick="changeMonth(1)">&#9654;</button>
-        </div>
-        <div class="header-btns">
-          <button class="btn btn-white" onclick="toggleSettings()">&#9881; 설정</button>
-          <button class="btn btn-gray"  onclick="window.print()">&#128438; 인쇄</button>
-        </div>
-      </div>
-
-      <div class="settings-panel" id="settingsPanel">
-        <div class="s-grid">
-          <div class="s-sec">
-            <h3>&#128100; 식번 인원</h3>
-            <div class="person-list" id="peopleList"></div>
-            <button class="btn-excel" onclick="openExcelImport('people')">&#128229; 엑셀에서 가져오기</button>
-            <div class="add-row">
-              <input type="text" id="personInput" placeholder="이름 입력" onkeydown="if(event.key==='Enter')addPerson()">
-              <button class="btn-add" onclick="addPerson()">+</button>
-            </div>
-          </div>
-          <div class="s-sec">
-            <h3>&#9200; 타임키퍼</h3>
-            <div class="person-list" id="tkList"></div>
-            <button class="btn-excel" onclick="openExcelImport('timeKeepers')">&#128229; 엑셀에서 가져오기</button>
-            <div class="add-row">
-              <input type="text" id="tkInput" placeholder="이름 입력" onkeydown="if(event.key==='Enter')addTK()">
-              <button class="btn-add" onclick="addTK()">+</button>
-            </div>
-          </div>
-          <div class="s-sec">
-            <h3>&#127939; 토요일 식번 인원</h3>
-            <div class="person-list" id="satPeopleList"></div>
-            <button class="btn-excel" onclick="openExcelImport('satPeople')">&#128229; 엑셀에서 가져오기</button>
-            <div class="add-row">
-              <input type="text" id="satPersonInput" placeholder="이름 입력" onkeydown="if(event.key==='Enter')addSatPerson()">
-              <button class="btn-add" onclick="addSatPerson()">+</button>
-            </div>
-          </div>
-          <div class="s-sec" style="grid-column: span 2; min-width:0;">
-            <h3>&#127869; 메뉴 <span id="menuCountBadge" class="menu-count"></span></h3>
-            <div class="menu-scroll" id="menuList"></div>
-            <div style="display:flex;gap:6px;align-items:center;margin-bottom:2px;">
-              <button class="btn-excel" onclick="openExcelImport('menus')">&#128229; 엑셀에서 가져오기</button>
-              <button class="btn-excel" style="color:#ef4444;background:#fef2f2;border-color:#fca5a5;" onclick="clearMenus()">&#128465; 메뉴 초기화</button>
-            </div>
-            <div class="add-row" style="margin-bottom:5px;">
-              <input type="text" id="menuInput" placeholder="메뉴 입력 (/ 로 줄바꿈)" onkeydown="if(event.key==='Enter')addMenuEntry()">
-              <button class="btn-add" onclick="addMenuEntry()">+</button>
-            </div>
-            <span class="bulk-toggle" onclick="toggleBulk()">&#128196; 여러 개 한꺼번에 추가</span>
-            <div class="bulk-area" id="bulkArea">
-              <textarea id="bulkInput" placeholder="한 줄에 메뉴 하나씩 입력&#10;예)&#10;된장찌개&#10;비빔밥/계란후라이&#10;불고기"></textarea>
-              <button class="btn-bulk" onclick="bulkAddMenus()">추가</button>
-            </div>
-          </div>
-          <div class="s-sec">
-            <h3 id="monthSettingLabel">&#128197; 담당 설정</h3>
-            <div class="s-field">
-              <label id="personSelectLabel">이번 달 첫 번째 식번</label>
-              <select id="monthPerson" onchange="onMonthSettingChange()"><option value="">인원을 먼저 추가하세요</option></select>
-            </div>
-            <div class="s-field">
-              <label id="tkSelectLabel">이번 달 첫 번째 타임키퍼</label>
-              <select id="monthTK" onchange="onMonthSettingChange()"><option value="">인원을 먼저 추가하세요</option></select>
-            </div>
-            <div class="s-field">
-              <label id="satSelectLabel">이번 달 첫 번째 토요일 식번</label>
-              <select id="monthSatPerson" onchange="onMonthSettingChange()"><option value="">인원을 먼저 추가하세요</option></select>
-            </div>
+      <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-stone-200">
+        <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <h2 class="text-lg font-bold">식번 · 타임키퍼</h2>
+          <div class="flex items-center gap-2">
+            <button id="cal-prev" class="w-8 h-8 rounded-lg bg-stone-100 hover:bg-stone-200"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+            <span id="cal-month" class="font-bold min-w-[90px] text-center"></span>
+            <button id="cal-next" class="w-8 h-8 rounded-lg bg-stone-100 hover:bg-stone-200"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+            <button id="cal-settings-btn" class="text-xs px-3 py-1.5 rounded-lg bg-white border border-stone-200 hover:bg-stone-100 transition-colors ml-1">
+              <i class="fa-solid fa-gear mr-1 text-stone-400"></i>설정
+            </button>
           </div>
         </div>
-      </div>
+        <p class="text-xs text-stone-500 mb-3">날짜 칸이나 타임키퍼 칸을 누르면 <b>그날만</b> 바꿀 수 있습니다. 순서 자체를 바꾸려면 설정에서.</p>
 
-      <div class="cal-wrap" id="calWrap"></div>
+        <div id="cal-settings" hidden class="mb-4 rounded-xl border border-stone-200 bg-stone-50/60 p-4">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <h3 class="text-sm font-bold text-stone-700 mb-2">식번 (월·화·수·금·일)</h3>
+              <div id="cal-list-people" class="cal-list"></div>
+              <div class="flex gap-1.5">
+                <select id="cal-add-people" class="flex-1 min-w-0 border border-stone-200 rounded-lg px-2 py-1.5 text-sm bg-white"></select>
+                <button data-caladd="people" class="text-sm px-3 py-1.5 rounded-lg bg-stone-800 text-white hover:bg-stone-900">추가</button>
+              </div>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-stone-700 mb-2">토요일 식번</h3>
+              <div id="cal-list-satPeople" class="cal-list"></div>
+              <div class="flex gap-1.5">
+                <select id="cal-add-satPeople" class="flex-1 min-w-0 border border-stone-200 rounded-lg px-2 py-1.5 text-sm bg-white"></select>
+                <button data-caladd="satPeople" class="text-sm px-3 py-1.5 rounded-lg bg-stone-800 text-white hover:bg-stone-900">추가</button>
+              </div>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-stone-700 mb-2">타임키퍼 (매주)</h3>
+              <div id="cal-list-timeKeepers" class="cal-list"></div>
+              <div class="flex gap-1.5">
+                <select id="cal-add-timeKeepers" class="flex-1 min-w-0 border border-stone-200 rounded-lg px-2 py-1.5 text-sm bg-white"></select>
+                <button data-caladd="timeKeepers" class="text-sm px-3 py-1.5 rounded-lg bg-stone-800 text-white hover:bg-stone-900">추가</button>
+              </div>
+            </div>
+          </div>
+          <div class="mt-4 pt-4 border-t border-stone-200">
+            <h3 id="cal-month-setting-title" class="text-sm font-bold text-stone-700 mb-2">이번 달 첫 순서</h3>
+            <p class="text-xs text-stone-500 mb-2">비워 두면 지난달에서 자동으로 이어집니다.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <label class="text-xs text-stone-500">첫 식번
+                <select id="monthPerson" class="mt-1 w-full border border-stone-200 rounded-lg px-2 py-1.5 text-sm bg-white text-stone-800"></select></label>
+              <label class="text-xs text-stone-500">첫 토요일 식번
+                <select id="monthSatPerson" class="mt-1 w-full border border-stone-200 rounded-lg px-2 py-1.5 text-sm bg-white text-stone-800"></select></label>
+              <label class="text-xs text-stone-500">첫 타임키퍼
+                <select id="monthTK" class="mt-1 w-full border border-stone-200 rounded-lg px-2 py-1.5 text-sm bg-white text-stone-800"></select></label>
+            </div>
+          </div>
+          <p class="text-xs text-stone-400 mt-3">이름은 기도제목 탭의 형제 목록에서 가져옵니다.</p>
+        </div>
 
-      <div class="memo-section">
-        <div class="memo-label">&#128221; 메모</div>
-        <textarea id="memoInput" placeholder="메모를 입력하세요..." oninput="saveMemo()"></textarea>
-        <pre id="memoPrint"></pre>
+        <div id="cal-grid" class="cal-grid"></div>
       </div>
     </div>
 
@@ -380,6 +284,19 @@
 
   </main>
 </section>
+
+<!-- ══ 그날만 바꾸기 모달 ══ -->
+<div id="calpick-modal" hidden class="fixed inset-0 z-50 bg-black/40 opacity-0 transition-opacity duration-200 items-center justify-center p-4">
+  <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl scale-95 transition-transform duration-200">
+    <h2 id="calpick-title" class="text-lg font-bold mb-1"></h2>
+    <p class="text-xs text-stone-500 mb-4">이날만 바뀝니다. 다른 날 순서는 그대로예요.</p>
+    <select id="calpick-select" class="w-full border border-stone-200 rounded-lg px-3 py-2.5 text-sm bg-white mb-5"></select>
+    <div class="flex gap-2 justify-end">
+      <button id="calpick-cancel" class="text-sm px-4 py-2.5 rounded-lg text-stone-600 hover:bg-stone-100 transition-colors">취소</button>
+      <button id="calpick-save" class="text-sm px-5 py-2.5 rounded-lg bg-stone-800 hover:bg-stone-900 text-white transition-colors">저장</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══ 내 이름 고르기 모달 ══ -->
 <div id="me-modal" hidden class="fixed inset-0 z-50 bg-black/40 opacity-0 transition-opacity duration-200 items-center justify-center p-4">
@@ -611,6 +528,7 @@ function startBoard(tab) {
     renderCards();
     renderClean();
     renderRead();
+    renderCalLists();
   }, (e) => showToast('불러오기 실패: ' + (e.code || e.message), 'error'));
 
   makeEditable($('board-title'), 'title');
@@ -685,13 +603,15 @@ $('me-close').addEventListener('click', () => closeModal($('me-modal')));
 $('me-modal').addEventListener('click', (e) => { if (e.target === $('me-modal')) closeModal($('me-modal')); });
 
 /* ═══════════════════════════════════════════════════
-   캘린더 (식단표 & 식번 달력 — 원본 로직 그대로, 저장만 Firestore)
+   캘린더 — 식번(매일, 목요일 쉼, 토요일은 별도 순번) + 타임키퍼(매주)
+   순번 계산은 meal-calendar.html 원본 로직. 저장은 boards/{id}/calendar/settings
    ═══════════════════════════════════════════════════ */
 let S = {
   year: new Date().getFullYear(), month: new Date().getMonth(),
-  people: [], satPeople: [], timeKeepers: [], menus: [],
-  monthSettings: {},   // { 'YYYY-MM': { personName, satPersonName, tkName } }
-  memo: ''
+  people: [], satPeople: [], timeKeepers: [],
+  monthSettings: {},   // { 'YYYY-MM': { personName, satPersonName, tkName } }  이번 달 첫 순서
+  overrides: {},       // { 'YYYY-MM-DD': 이름 }  그날만 바꾼 식번
+  tkOverrides: {}      // { 'YYYY-MM-DD'(월요일): 이름 }  그 주만 바꾼 타임키퍼
 };
 const calRef = () => doc(db, 'boards', boardId, 'calendar', 'settings');
 let calSaveTimer = null;
@@ -699,166 +619,89 @@ let calSaveTimer = null;
 function saveCal() {
   clearTimeout(calSaveTimer);
   calSaveTimer = setTimeout(async () => {
-    const { people, satPeople, timeKeepers, menus, monthSettings, memo } = S;
-    try { await setDoc(calRef(), { people, satPeople, timeKeepers, menus, monthSettings, memo, updatedAt: serverTimestamp() }); }
+    const { people, satPeople, timeKeepers, monthSettings, overrides, tkOverrides } = S;
+    try { await setDoc(calRef(), { people, satPeople, timeKeepers, monthSettings, overrides, tkOverrides, updatedAt: serverTimestamp() }); }
     catch (e) { showToast('달력 저장 실패: ' + (e.code || e.message), 'error'); }
   }, 300);
 }
 
 function startCalendar() {
-  renderLists(); renderCal();   // 데이터가 오기 전에도 빈 달력은 보이게
+  renderCalLists(); renderCal();   // 데이터가 오기 전에도 빈 달력은 보이게
   onSnapshot(calRef(), (snap) => {
     if (snap.exists()) {
       const d = snap.data();
       S.people = d.people || []; S.satPeople = d.satPeople || []; S.timeKeepers = d.timeKeepers || [];
-      S.menus = d.menus || []; S.monthSettings = d.monthSettings || {}; S.memo = d.memo || '';
+      S.monthSettings = d.monthSettings || {}; S.overrides = d.overrides || {}; S.tkOverrides = d.tkOverrides || {};
     }
-    const memoEl = $('memoInput');
-    if (document.activeElement !== memoEl) memoEl.value = S.memo;
-    $('memoPrint').textContent = S.memo;
-    renderLists(); renderCal();
+    renderCalLists(); renderCal();
   }, (e) => showToast('달력 불러오기 실패: ' + (e.code || e.message), 'error'));
 }
 
-function addPerson() {
-  const el = $('personInput'); const v = el.value.trim();
-  if (v && !S.people.includes(v)) { S.people.push(v); saveCal(); renderLists(); renderCal(); }
-  el.value = ''; el.focus();
+/* ── 설정 패널: 세 목록 ── */
+const CAL_LISTS = ['people', 'satPeople', 'timeKeepers'];
+function renderCalLists() {
+  CAL_LISTS.forEach((key) => {
+    const arr = S[key];
+    const box = $('cal-list-' + key);
+    box.innerHTML = arr.length ? arr.map((n, i) => `
+      <div class="cal-row">
+        <span class="n">${i + 1}</span><span class="nm">${esc(n)}</span>
+        <button data-mv="${key}:${i}:-1" ${i === 0 ? 'disabled' : ''}>&#9650;</button>
+        <button data-mv="${key}:${i}:1" ${i === arr.length - 1 ? 'disabled' : ''}>&#9660;</button>
+        <button class="x" data-rm="${key}:${i}">&#215;</button>
+      </div>`).join('')
+      : '<p class="text-xs text-stone-400 py-1">없음</p>';
+    const sel = $('cal-add-' + key);
+    const rest = members.map((m) => m.name).filter((n) => !arr.includes(n));
+    sel.innerHTML = rest.length ? rest.map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join('')
+                                : '<option value="">추가할 이름 없음</option>';
+  });
+  document.querySelectorAll('[data-mv]').forEach((b) => b.addEventListener('click', () => {
+    const [key, i, dir] = b.dataset.mv.split(':'); moveCalItem(key, +i, +dir);
+  }));
+  document.querySelectorAll('[data-rm]').forEach((b) => b.addEventListener('click', () => {
+    const [key, i] = b.dataset.rm.split(':'); S[key].splice(+i, 1); saveCal(); renderCalLists(); renderCal();
+  }));
+  renderMonthSelects();
 }
-function removePerson(i) { S.people.splice(i, 1); saveCal(); renderLists(); renderCal(); }
-function addTK() {
-  const el = $('tkInput'); const v = el.value.trim();
-  if (v && !S.timeKeepers.includes(v)) { S.timeKeepers.push(v); saveCal(); renderLists(); renderCal(); }
-  el.value = ''; el.focus();
-}
-function removeTK(i) { S.timeKeepers.splice(i, 1); saveCal(); renderLists(); renderCal(); }
-function addSatPerson() {
-  const el = $('satPersonInput'); const v = el.value.trim();
-  if (v && !S.satPeople.includes(v)) { S.satPeople.push(v); saveCal(); renderLists(); renderCal(); }
-  el.value = ''; el.focus();
-}
-function removeSatPerson(i) { S.satPeople.splice(i, 1); saveCal(); renderLists(); renderCal(); }
-
-/* 엑셀 가져오기 */
-let _importTarget = null;
-const SKIP_HEADERS = new Set(['이름', '성명', '순번', '번호', 'name', 'no', '성명/이름', '구분', '메뉴', '식단', '음식', 'menu', 'food']);
-function openExcelImport(listKey) {
-  _importTarget = listKey;
-  const el = $('excelFileInput'); el.value = ''; el.click();
-}
-function handleExcelImport(event) {
-  const file = event.target.files[0];
-  if (!file || !_importTarget) return;
-  if (typeof XLSX === 'undefined') { showToast('엑셀 기능을 쓰려면 인터넷 연결이 필요합니다.', 'error'); return; }
-  const reader = new FileReader();
-  reader.onload = function (e) {
-    try {
-      const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
-      const arr = S[_importTarget];
-      const isMenus = _importTarget === 'menus';
-      let added = 0;
-      for (const row of rows) {
-        const raw = String(row[0] ?? '').trim();
-        if (!raw) continue;
-        if (SKIP_HEADERS.has(raw.toLowerCase())) continue;
-        if (!isMenus && arr.includes(raw)) continue;
-        if (isMenus && raw === arr[arr.length - 1]) continue;
-        arr.push(raw); added++;
-      }
-      if (added > 0) { saveCal(); renderLists(); renderCal(); showToast(`${added}개가 추가됐습니다.`); }
-      else showToast('추가할 새 항목이 없습니다.', 'error');
-    } catch (err) {
-      showToast('파일을 읽을 수 없습니다. xlsx / xls / csv 인지 확인해 주세요.', 'error');
-    }
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-function moveItem(key, i, dir) {
+function moveCalItem(key, i, dir) {
   const arr = S[key]; const j = i + dir;
   if (j < 0 || j >= arr.length) return;
   [arr[i], arr[j]] = [arr[j], arr[i]];
-  saveCal(); renderLists(); renderCal();
+  saveCal(); renderCalLists(); renderCal();
 }
-function dedupeConsec(arr) { return arr.filter((v, i) => i === 0 || v !== arr[i - 1]); }
-function addMenuEntry() {
-  const el = $('menuInput'); const v = el.value.trim();
-  if (v && v !== S.menus[S.menus.length - 1]) { S.menus.push(v); saveCal(); renderLists(); renderCal(); }
-  el.value = ''; el.focus();
-}
-function removeMenu(i) { S.menus.splice(i, 1); saveCal(); renderLists(); renderCal(); }
-function toggleBulk() { $('bulkArea').classList.toggle('open'); }
-function bulkAddMenus() {
-  const ta = $('bulkInput');
-  const lines = ta.value.split('\n').map((l) => l.trim()).filter(Boolean);
-  if (!lines.length) return;
-  lines.forEach((l) => { if (l !== S.menus[S.menus.length - 1]) S.menus.push(l); });
-  ta.value = '';
-  $('bulkArea').classList.remove('open');
-  saveCal(); renderLists(); renderCal();
-}
-function clearMenus() {
-  if (!S.menus.length) return;
-  if (!confirm(`메뉴 ${S.menus.length}개를 모두 삭제할까요?`)) return;
-  S.menus = []; saveCal(); renderLists(); renderCal();
-}
-function saveMemo() {
-  S.memo = $('memoInput').value;
-  $('memoPrint').textContent = S.memo;
-  saveCal();
-}
+document.querySelectorAll('[data-caladd]').forEach((b) => b.addEventListener('click', () => {
+  const key = b.dataset.caladd; const v = $('cal-add-' + key).value;
+  if (!v || S[key].includes(v)) return;
+  S[key].push(v); saveCal(); renderCalLists(); renderCal();
+}));
+$('cal-settings-btn').addEventListener('click', () => {
+  const p = $('cal-settings'); p.hasAttribute('hidden') ? show(p) : hide(p);
+});
 
-function personRowHTML(name, i, len, removeFn, listKey) {
-  return `<div class="person-row">
-    <span class="p-num">${i + 1}</span>
-    <span class="p-name">${esc(name)}</span>
-    <button class="mv" onclick="moveItem('${listKey}',${i},-1)" ${i === 0 ? 'disabled' : ''}>&#9650;</button>
-    <button class="mv" onclick="moveItem('${listKey}',${i},1)" ${i === len - 1 ? 'disabled' : ''}>&#9660;</button>
-    <span class="x" onclick="${removeFn}(${i})">&#215;</span>
-  </div>`;
-}
-function emptyRow() { return '<span style="font-size:.76rem;color:#d1d5db;padding:4px 2px;display:block">없음</span>'; }
-
-function renderLists() {
-  const pl = S.people, sp = S.satPeople, tk = S.timeKeepers;
-  $('peopleList').innerHTML = pl.length ? pl.map((n, i) => personRowHTML(n, i, pl.length, 'removePerson', 'people')).join('') : emptyRow();
-  $('satPeopleList').innerHTML = sp.length ? sp.map((n, i) => personRowHTML(n, i, sp.length, 'removeSatPerson', 'satPeople')).join('') : emptyRow();
-  $('tkList').innerHTML = tk.length ? tk.map((n, i) => personRowHTML(n, i, tk.length, 'removeTK', 'timeKeepers')).join('') : emptyRow();
-  $('menuList').innerHTML = S.menus.length
-    ? S.menus.map((m, i) => `<div class="menu-row"><span class="m-num">${i + 1}</span><span class="m-name">${esc(m)}</span><span class="x" onclick="removeMenu(${i})">&#215;</span></div>`).join('')
-    : '<span style="font-size:.76rem;color:#d1d5db">없음</span>';
-  $('menuCountBadge').textContent = S.menus.length ? `(${S.menus.length}개)` : '';
-  renderSelects();
-}
-
-function renderSelects() {
-  const mn = S.month + 1;
+/* ── 이번 달 첫 순서 ── */
+function renderMonthSelects() {
   const saved = S.monthSettings[monthKey(S.year, S.month)] || {};
-  $('monthSettingLabel').textContent = `${S.year}년 ${mn}월 담당 설정`;
-  $('personSelectLabel').textContent = `${mn}월 첫 번째 식번`;
-  $('satSelectLabel').textContent = `${mn}월 첫 번째 토요일 식번`;
-  $('tkSelectLabel').textContent = `${mn}월 첫 번째 타임키퍼`;
+  $('cal-month-setting-title').textContent = `${S.year}년 ${S.month + 1}월 첫 순서`;
   buildSelect('monthPerson', S.people, saved.personName || '');
   buildSelect('monthSatPerson', S.satPeople, saved.satPersonName || '');
   buildSelect('monthTK', S.timeKeepers, saved.tkName || '');
 }
 function buildSelect(id, arr, savedName) {
-  const el = $(id); if (!el) return;
-  let html = `<option value=""${!savedName ? ' selected' : ''}>(자동으로 이어받기)</option>`;
-  if (arr.length) html += arr.map((n) => `<option value="${esc(n)}"${n === savedName ? ' selected' : ''}>${esc(n)}</option>`).join('');
-  el.innerHTML = html;
+  $(id).innerHTML = `<option value="">(자동으로 이어받기)</option>` +
+    arr.map((n) => `<option value="${esc(n)}"${n === savedName ? ' selected' : ''}>${esc(n)}</option>`).join('');
 }
-function onMonthSettingChange() {
+['monthPerson', 'monthSatPerson', 'monthTK'].forEach((id) => $(id).addEventListener('change', () => {
   const key = monthKey(S.year, S.month);
   const p = $('monthPerson').value, sp = $('monthSatPerson').value, tk = $('monthTK').value;
   if (p || sp || tk) S.monthSettings[key] = { personName: p, satPersonName: sp, tkName: tk };
   else delete S.monthSettings[key];
   saveCal(); renderCal();
-}
+}));
 
-/* 날짜 유틸 */
+/* ── 날짜 유틸 ── */
 function monthKey(year, month) { return `${year}-${String(month + 1).padStart(2, '0')}`; }
+function dateKey(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
 function addDays(date, n) { const d = new Date(date); d.setDate(d.getDate() + n); return d; }
 function getMondayOf(date) { const d = new Date(date); const dw = d.getDay(); d.setDate(d.getDate() + (dw === 0 ? -6 : 1 - dw)); return d; }
 function countDays(from, to, pred) { let n = 0, d = new Date(from); while (d < to) { if (pred(d)) n++; d.setDate(d.getDate() + 1); } return n; }
@@ -867,143 +710,134 @@ function resolveStartIdx(list, name) { if (!list.length) return 0; const i = lis
 
 const isRegularMealDay = (d) => ![4, 6].includes(d.getDay()); // 목·토 제외
 const isSatDay = (d) => d.getDay() === 6;
-const isMenuDay = (d) => ![4, 6].includes(d.getDay());
-
 function firstMealDayOfMonth(year, month) { const d = new Date(year, month, 1); while ([4, 6].includes(d.getDay())) d.setDate(d.getDate() + 1); return d; }
 function firstSaturdayOfMonth(year, month) { const d = new Date(year, month, 1); while (d.getDay() !== 6) d.setDate(d.getDate() + 1); return d; }
 function firstWeekMondayOfMonth(year, month) { const d = new Date(year, month, 1); while (d.getDay() !== 4) d.setDate(d.getDate() + 1); return addDays(d, -3); }
 
+/* ── 순번 계산 (원본 로직) ── */
 function computeMonthStartIdx(people, year, month, depth) {
-  if (!people.length) return 0;
-  if (depth > 24) return 0;
+  if (!people.length || depth > 24) return 0;
   const saved = S.monthSettings[monthKey(year, month)];
   if (saved && saved.personName) return resolveStartIdx(people, saved.personName);
   const pm = month === 0 ? 11 : month - 1, py = month === 0 ? year - 1 : year;
-  const prev = computeMonthStartIdx(people, py, pm, (depth || 0) + 1);
+  const prev = computeMonthStartIdx(people, py, pm, depth + 1);
   const count = countDays(firstMealDayOfMonth(py, pm), addDays(new Date(year, month, 0), 1), isRegularMealDay);
   return modIdx(prev + count, people.length);
 }
 function computeMonthSatStartIdx(year, month, depth) {
-  if (!S.satPeople.length) return 0;
-  if (depth > 24) return 0;
+  if (!S.satPeople.length || depth > 24) return 0;
   const saved = S.monthSettings[monthKey(year, month)];
   if (saved && saved.satPersonName) return resolveStartIdx(S.satPeople, saved.satPersonName);
   const pm = month === 0 ? 11 : month - 1, py = month === 0 ? year - 1 : year;
-  const prev = computeMonthSatStartIdx(py, pm, (depth || 0) + 1);
+  const prev = computeMonthSatStartIdx(py, pm, depth + 1);
   const count = countDays(firstSaturdayOfMonth(py, pm), addDays(new Date(year, month, 0), 1), isSatDay);
   return modIdx(prev + count, S.satPeople.length);
 }
 function computeMonthTKStartIdx(year, month, depth) {
-  if (!S.timeKeepers.length) return 0;
-  if (depth > 24) return 0;
+  if (!S.timeKeepers.length || depth > 24) return 0;
   const saved = S.monthSettings[monthKey(year, month)];
   if (saved && saved.tkName) return resolveStartIdx(S.timeKeepers, saved.tkName);
   const pm = month === 0 ? 11 : month - 1, py = month === 0 ? year - 1 : year;
-  const prev = computeMonthTKStartIdx(py, pm, (depth || 0) + 1);
+  const prev = computeMonthTKStartIdx(py, pm, depth + 1);
   const weeks = Math.round((firstWeekMondayOfMonth(year, month) - firstWeekMondayOfMonth(py, pm)) / 604800000);
   return modIdx(prev + weeks, S.timeKeepers.length);
 }
-
 function personFor(date) {
-  if (date.getDay() === 6) return satPersonFor(date);
+  if (date.getDay() === 4) return null;
+  if (date.getDay() === 6) {
+    if (!S.satPeople.length) return null;
+    const y = date.getFullYear(), m = date.getMonth();
+    const n = countDays(firstSaturdayOfMonth(y, m), date, isSatDay);
+    return S.satPeople[modIdx(computeMonthSatStartIdx(y, m, 0) + n, S.satPeople.length)];
+  }
   if (!S.people.length) return null;
   const y = date.getFullYear(), m = date.getMonth();
-  const startIdx = computeMonthStartIdx(S.people, y, m, 0);
   const n = countDays(firstMealDayOfMonth(y, m), date, isRegularMealDay);
-  return S.people[modIdx(startIdx + n, S.people.length)];
-}
-function satPersonFor(date) {
-  if (!S.satPeople.length) return null;
-  const y = date.getFullYear(), m = date.getMonth();
-  const startIdx = computeMonthSatStartIdx(y, m, 0);
-  const n = countDays(firstSaturdayOfMonth(y, m), date, isSatDay);
-  return S.satPeople[modIdx(startIdx + n, S.satPeople.length)];
-}
-function menuFor(date) {
-  if (!S.menus.length) return null;
-  const n = countDays(new Date(2000, 0, 1), date, isMenuDay);
-  return S.menus[modIdx(n, S.menus.length)];
+  return S.people[modIdx(computeMonthStartIdx(S.people, y, m, 0) + n, S.people.length)];
 }
 function timekeeperFor(monday) {
   if (!S.timeKeepers.length) return null;
-  const thursday = addDays(monday, 3);
+  const thursday = addDays(monday, 3);   // 그 주의 목요일이 속한 달 기준
   const y = thursday.getFullYear(), m = thursday.getMonth();
-  const startIdx = computeMonthTKStartIdx(y, m, 0);
   const weeks = Math.round((monday - firstWeekMondayOfMonth(y, m)) / 604800000);
-  return S.timeKeepers[modIdx(startIdx + weeks, S.timeKeepers.length)];
-}
-function formatMenu(menuStr) {
-  const parts = menuStr.split('/').map((s) => s.trim()).filter(Boolean);
-  return parts.filter((v, i) => i === 0 || v !== parts[i - 1]).map((s) => esc(s)).join('<br>');
+  return S.timeKeepers[modIdx(computeMonthTKStartIdx(y, m, 0) + weeks, S.timeKeepers.length)];
 }
 
-const MONTHS = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+/* ── 달력 그리기 ── */
 const DOWS = ['월', '화', '수', '목', '금', '토', '일'];
-function changeMonth(d) {
-  S.month += d;
-  if (S.month > 11) { S.month = 0; S.year++; }
-  if (S.month < 0) { S.month = 11; S.year--; }
-  renderCal();
-}
-function toggleSettings() { $('settingsPanel').classList.toggle('open'); }
-function dayTypeOf(dw) {
-  if (dw === 4) return { key: 'off', label: '휴무' };
-  if (dw === 6) return { key: 'bread', label: '빵식' };
-  if (dw === 0) return { key: 'evening', label: '저녁' };
-  return { key: 'jugan', label: '아침' };
-}
+$('cal-prev').addEventListener('click', () => { S.month--; if (S.month < 0) { S.month = 11; S.year--; } renderCal(); });
+$('cal-next').addEventListener('click', () => { S.month++; if (S.month > 11) { S.month = 0; S.year++; } renderCal(); });
 
 function renderCal() {
-  const mn = S.month + 1;
-  $('monthLabel').textContent = `${S.year}년 ${MONTHS[S.month]}`;
-  $('printTitle').textContent = `${S.year}년 ${mn}월 식번표`;
-  renderSelects();
-
+  $('cal-month').textContent = `${S.year}년 ${S.month + 1}월`;
+  renderMonthSelects();
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const lastDay = new Date(S.year, S.month + 1, 0);
-  let html = `<div class="cal-head"><div class="tk-hd">타임키퍼</div>${DOWS.map((d) => `<div>${d}</div>`).join('')}</div>`;
+
+  let html = `<div class="cal-hd">TK</div>` +
+    DOWS.map((d, i) => `<div class="cal-hd${i === 5 ? ' sat' : i === 6 ? ' sun' : ''}">${d}</div>`).join('');
 
   let wk = getMondayOf(new Date(S.year, S.month, 1));
   while (wk <= lastDay) {
-    const mon = new Date(wk);
-    const tk = timekeeperFor(mon);
-    let row = `<div class="cal-week"><div class="tk-cell">`;
-    row += tk ? `<div class="tk-lbl">타임키퍼</div><div class="tk-pill">${esc(tk)}</div>` : `<div class="no-tk">-</div>`;
-    row += `</div>`;
+    const mon = new Date(wk), mk = dateKey(mon);
+    const tkOv = S.tkOverrides[mk];
+    const tk = tkOv || timekeeperFor(mon);
+    html += `<div class="cal-tk" data-tkweek="${mk}"><span class="lbl">TK</span>` +
+      (tk ? `<span class="tk-pill${tkOv ? ' ring-2 ring-amber-400' : ''}">${esc(tk)}</span>` : `<span class="who none">-</span>`) + `</div>`;
+
     for (let i = 0; i < 7; i++) {
-      const cd = addDays(mon, i), dw = cd.getDay();
+      const cd = addDays(mon, i), dw = cd.getDay(), key = dateKey(cd);
       const out = cd.getMonth() !== S.month;
-      const type = dayTypeOf(dw);
-      let cls = 'day-cell';
-      if (out) cls += ' outside';
+      let cls = 'cal-day';
+      if (out) cls += ' out';
+      if (!out && dw === 4) cls += ' off';
       if (cd.getTime() === today.getTime()) cls += ' today';
-      if (dw === 0) cls += ' sun-day';
-      if (dw === 6) cls += ' sat-day';
-      if (dw === 4) cls += ' thu';
-      let inner = `<div class="day-num">${cd.getDate()}</div>`;
+      if (dw === 0) cls += ' sun'; if (dw === 6) cls += ' sat';
+      let inner = `<div class="dn">${cd.getDate()}</div>`;
       if (!out) {
-        inner += `<div class="meal-badge badge-${type.key}">${type.label}</div>`;
-        if (type.key !== 'off') {
-          const person = personFor(cd);
-          inner += `<div class="meal-person">${person ? `담당: ${esc(person)}` : '<span class="empty-txt">담당없음</span>'}</div>`;
-          if (type.key === 'bread') inner += `<div class="meal-menu">&#127838; 빵식 (고정)</div>`;
-          else { const m = menuFor(cd); inner += `<div class="meal-menu">${m ? formatMenu(m) : '<span class="empty-txt">메뉴없음</span>'}</div>`; }
+        if (dw === 4) inner += `<div class="off-lbl">쉼</div>`;
+        else {
+          const ov = S.overrides[key];
+          const who = ov || personFor(cd);
+          inner += who ? `<div class="who${ov ? ' ov' : ''}">${esc(who)}</div>` : `<div class="who none">-</div>`;
         }
       }
-      row += `<div class="${cls}">${inner}</div>`;
+      html += `<div class="${cls}"${!out && dw !== 4 ? ` data-day="${key}"` : ''}>${inner}</div>`;
     }
-    html += row + `</div>`;
     wk = addDays(wk, 7);
   }
-  $('calWrap').innerHTML = html;
+  $('cal-grid').innerHTML = html;
+  $('cal-grid').querySelectorAll('[data-day]').forEach((el) => el.addEventListener('click', () => openCalPick('day', el.dataset.day)));
+  $('cal-grid').querySelectorAll('[data-tkweek]').forEach((el) => el.addEventListener('click', () => openCalPick('tk', el.dataset.tkweek)));
 }
 
-// 원본 html 의 inline onclick 이 그대로 동작하도록 전역에 노출
-Object.assign(window, {
-  changeMonth, toggleSettings, openExcelImport, handleExcelImport,
-  addPerson, removePerson, addTK, removeTK, addSatPerson, removeSatPerson,
-  moveItem, addMenuEntry, removeMenu, toggleBulk, bulkAddMenus, clearMenus, saveMemo, onMonthSettingChange
+/* ── 그날만 바꾸기 모달 ── */
+let calPick = null;   // { kind: 'day' | 'tk', key }
+function openCalPick(kind, key) {
+  calPick = { kind, key };
+  const d = new Date(key + 'T00:00:00');
+  const isSat = d.getDay() === 6;
+  const list = kind === 'tk' ? S.timeKeepers : (isSat ? S.satPeople : S.people);
+  const auto = kind === 'tk' ? timekeeperFor(d) : personFor(d);
+  const cur = kind === 'tk' ? S.tkOverrides[key] : S.overrides[key];
+  $('calpick-title').textContent = kind === 'tk'
+    ? `${d.getMonth() + 1}월 ${d.getDate()}일 주 타임키퍼`
+    : `${d.getMonth() + 1}월 ${d.getDate()}일 (${DOWS[(d.getDay() + 6) % 7]}) 식번`;
+  const names = [...new Set([...list, ...members.map((m) => m.name)])];
+  $('calpick-select').innerHTML = `<option value="">순서대로 (${esc(auto || '없음')})</option>` +
+    names.map((n) => `<option value="${esc(n)}"${n === cur ? ' selected' : ''}>${esc(n)}</option>`).join('');
+  openModal($('calpick-modal'));
+}
+$('calpick-save').addEventListener('click', () => {
+  if (!calPick) return;
+  const v = $('calpick-select').value;
+  const map = calPick.kind === 'tk' ? S.tkOverrides : S.overrides;
+  if (v) map[calPick.key] = v; else delete map[calPick.key];
+  saveCal(); renderCal();
+  closeModal($('calpick-modal'));
 });
+$('calpick-cancel').addEventListener('click', () => closeModal($('calpick-modal')));
+$('calpick-modal').addEventListener('click', (e) => { if (e.target === $('calpick-modal')) closeModal($('calpick-modal')); });
 
 /* ═══════════════════════════════════════════════════
    청소 구역 — board.cleaning = [{ zone, a, b }]  (전부 손으로 정함)
@@ -1400,7 +1234,7 @@ $('share-modal').addEventListener('click', (e) => { if (e.target === $('share-mo
 
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
-  [$('edit-modal'), $('arch-modal'), $('share-modal'), $('me-modal')].forEach((m) => { if (!m.hasAttribute('hidden')) closeModal(m); });
+  [$('edit-modal'), $('arch-modal'), $('share-modal'), $('me-modal'), $('calpick-modal')].forEach((m) => { if (!m.hasAttribute('hidden')) closeModal(m); });
 });
 
 /* ── 시작 (모든 정의가 끝난 뒤) ── */
