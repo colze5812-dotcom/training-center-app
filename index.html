@@ -287,7 +287,7 @@
     <div id="tab-letter" class="tab" hidden>
       <div class="bg-white rounded-2xl p-5 shadow-sm border border-stone-200 mb-4">
         <h2 class="text-lg font-bold mb-1">마음의 편지</h2>
-        <p class="text-xs text-stone-500 mb-3">누가 썼는지 남지 않습니다. 멤버 모두가 볼 수 있습니다.</p>
+        <p class="text-xs text-stone-500 mb-3">누가 썼는지 남지 않습니다. 멤버 모두가 볼 수 있고, 쓴 기기에서만 지울 수 있습니다.</p>
         <textarea id="letter-input" rows="4" maxlength="1000" placeholder="하고 싶은 말을 적어 주세요."
                   class="w-full border border-stone-200 rounded-lg px-3.5 py-2.5 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-stone-800/10 focus:border-stone-400"></textarea>
         <div class="flex justify-end mt-2">
@@ -1058,27 +1058,57 @@ $('bible-pick-me').addEventListener('click', openMePicker);
 /* ═══════════════════════════════════════════════════
    마음의 편지 — boards/{id}/letters (익명, 전원 열람)
    ═══════════════════════════════════════════════════ */
+// 쓴 사람만 지울 수 있게: 이 기기에 무작위 표식을 두고, 글에 같이 저장한다.
+// 표식은 이름과 아무 관련이 없어서 누가 썼는지는 여전히 알 수 없다.
+function letterToken() {
+  let t = '';
+  try { t = localStorage.getItem('hq_letter_token') || ''; } catch (_) {}
+  if (!t) {
+    t = newBoardId();
+    try { localStorage.setItem('hq_letter_token', t); } catch (_) {}
+  }
+  return t;
+}
+let letterDelArmed = '';
 function startLetters() {
   onSnapshot(query(collection(db, 'boards', boardId, 'letters'), orderBy('createdAt', 'desc')), (snap) => {
     const list = $('letter-list');
     if (snap.empty) { list.innerHTML = '<p class="text-sm text-stone-400 text-center py-8">아직 편지가 없습니다.</p>'; return; }
+    const mineTok = letterToken();
     list.innerHTML = snap.docs.map((d) => {
       const a = d.data();
       const t = a.createdAt && a.createdAt.toDate ? a.createdAt.toDate() : null;
       const when = t ? `${t.getFullYear()}.${String(t.getMonth() + 1).padStart(2, '0')}.${String(t.getDate()).padStart(2, '0')}` : '방금';
+      const mine = a.owner && a.owner === mineTok;
       return `<div class="bg-white rounded-2xl p-5 shadow-sm border border-stone-200">
         <p class="text-sm text-stone-800 leading-relaxed whitespace-pre-wrap">${esc(a.text)}</p>
-        <p class="text-xs text-stone-400 mt-3">${when}</p>
+        <div class="flex items-center justify-between mt-3">
+          <p class="text-xs text-stone-400">${when}</p>
+          ${mine ? `<button data-ldel="${esc(d.id)}" class="text-xs px-2.5 py-1 rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 transition-colors">${letterDelArmed === d.id ? '정말 지울까요? 다시 누르세요' : '지우기'}</button>` : ''}
+        </div>
       </div>`;
     }).join('');
+    list.querySelectorAll('[data-ldel]').forEach((b) => b.addEventListener('click', () => deleteLetter(b.dataset.ldel, b)));
   }, (e) => showToast('편지 불러오기 실패: ' + (e.code || e.message), 'error'));
+}
+async function deleteLetter(id, btn) {
+  if (letterDelArmed !== id) {
+    letterDelArmed = id;
+    btn.textContent = '정말 지울까요? 다시 누르세요';
+    btn.className = 'text-xs px-2.5 py-1 rounded-lg bg-red-600 text-white transition-colors';
+    setTimeout(() => { if (letterDelArmed === id) { letterDelArmed = ''; btn.textContent = '지우기'; btn.className = 'text-xs px-2.5 py-1 rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 transition-colors'; } }, 4000);
+    return;
+  }
+  letterDelArmed = '';
+  try { await deleteDoc(doc(db, 'boards', boardId, 'letters', id)); showToast('지웠습니다.'); }
+  catch (e) { showToast('지우기 실패: ' + (e.code || e.message), 'error'); }
 }
 $('btn-letter-send').addEventListener('click', async () => {
   const el = $('letter-input'); const text = el.value.trim();
   if (!text) { el.focus(); return; }
   const btn = $('btn-letter-send'); btn.disabled = true;
   try {
-    await addDoc(collection(db, 'boards', boardId, 'letters'), { text, createdAt: serverTimestamp() });
+    await addDoc(collection(db, 'boards', boardId, 'letters'), { text, owner: letterToken(), createdAt: serverTimestamp() });
     el.value = ''; showToast('보냈습니다.');
   } catch (e) { showToast('보내기 실패: ' + (e.code || e.message), 'error'); }
   finally { btn.disabled = false; }
