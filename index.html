@@ -136,7 +136,7 @@
         <button class="tabbtn" data-tab="pray"><i class="fa-solid fa-hands-praying"></i>기도</button>
         <button class="tabbtn" data-tab="mem"><i class="fa-solid fa-book-bible"></i>암송</button>
         <button class="tabbtn" data-tab="study"><i class="fa-solid fa-pen-to-square"></i>공부</button>
-        <button class="tabbtn" data-tab="game"><i class="fa-solid fa-gamepad"></i>게임</button>
+        <button class="tabbtn" data-tab="review"><i class="fa-solid fa-clipboard-check"></i>평가회</button>
         <button class="tabbtn" data-tab="letter"><i class="fa-regular fa-envelope"></i>편지</button>
       </nav>
     </div>
@@ -281,8 +281,8 @@
     <div id="tab-mem" class="tab" hidden><div id="mem-body"></div></div>
     <!-- ── 공부 ── -->
     <div id="tab-study" class="tab" hidden><div id="study-body"></div></div>
-    <!-- ── 게임 ── -->
-    <div id="tab-game" class="tab" hidden><div id="game-body"></div></div>
+    <!-- ── 평가회 ── -->
+    <div id="tab-review" class="tab" hidden><div id="review-body"></div></div>
 
     <!-- ── 마음의 편지 ── -->
     <div id="tab-letter" class="tab" hidden>
@@ -384,6 +384,7 @@ import {
   collection, addDoc, onSnapshot, query, orderBy, getDocs, serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 import { BOOKS, VERSES, SECTIONS } from './bible-data.js';
+import { REVIEWS } from './reviews-data.js';
 
 /* ═══════════════════════════════════════════════════
    공통
@@ -470,9 +471,9 @@ try {
 }
 
 /* ── 라우팅: #/b/<id>/<탭> ── */
-const TABS = ['cal', 'clean', 'read', 'pray', 'mem', 'study', 'game', 'letter'];
+const TABS = ['cal', 'clean', 'read', 'pray', 'mem', 'study', 'review', 'letter'];
 function readRoute() {
-  const m = location.hash.match(/^#\/b\/([A-Za-z0-9_-]{20,})(?:\/(cal|clean|read|pray|mem|study|game|letter))?\/?$/);
+  const m = location.hash.match(/^#\/b\/([A-Za-z0-9_-]{20,})(?:\/(cal|clean|read|pray|mem|study|review|letter))?\/?$/);
   return m ? { id: m[1], tab: m[2] || 'cal' } : null;
 }
 function newBoardId() {
@@ -1409,182 +1410,68 @@ $('study-body').addEventListener('input', (e) => {
   else if (t.matches('textarea[data-memo]') && studyLesson) { bsMemos[studyLesson.id] = t.value; saveMemo(studyLesson.id, t.value); }
 });
 
-/* ═══ 게임 ═══ */
-const GAME_TYPES = [
-  { id: 'fill', icon: '✏️', name: '빈칸 채우기' },
-  { id: 'order', icon: '🔀', name: '단어 배열' },
-  { id: 'match', icon: '🔗', name: '구절 맞히기' },
-  { id: 'type', icon: '⌨️', name: '타이핑' }
-];
-let gameView = 'setup', gameSections = {}, gameType = 'fill', gameCards = [], gameIdx = 0, gameScore = { c: 0, w: 0 }, gameState = {};
-SECTIONS.forEach((s) => { gameSections[s.id] = true; });
-const shuffle = (a) => [...a].sort(() => Math.random() - .5);
-const getGameCards = () => { const r = []; SECTIONS.forEach((s) => { if (gameSections[s.id]) s.subs.forEach((sub) => r.push(...sub.cards)); }); return r; };
-const CHOICE = (state, extra = '') => `w-full text-left px-4 py-3 rounded-xl border text-sm transition-colors ${state === 'correct' ? 'bg-emerald-50 border-emerald-300 text-emerald-800 font-bold' : state === 'wrong' ? 'bg-rose-50 border-rose-300 text-rose-700' : 'bg-white border-stone-200 hover:bg-stone-50'} ${extra}`;
-const NEXT_BTN = () => `<button data-act="g-next" class="${BTN_PRIMARY} w-full mt-3">${gameIdx + 1 < gameCards.length ? '다음 ▶' : '결과 보기 ▶'}</button>`;
-
-function renderGame() {
-  const body = $('game-body');
-  if (gameView === 'play') return renderGamePlay();
-  if (gameView === 'end') return renderGameEnd();
-  const cards = getGameCards();
-  const allSel = SECTIONS.every((s) => gameSections[s.id]);
-  body.innerHTML = `
-    <div class="bg-white rounded-2xl p-5 shadow-sm border border-stone-200 mb-4">
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="text-lg font-bold">암송 게임</h2>
-        <button data-act="g-all" data-v="${allSel ? '0' : '1'}" class="text-xs px-3 py-1.5 rounded-lg bg-white border border-stone-200 hover:bg-stone-100">${allSel ? '전체 해제' : '전체 선택'}</button>
-      </div>
-      <p class="text-xs text-stone-500 mb-2">범위 · 선택된 구절 ${cards.length}개</p>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-        ${SECTIONS.map((s) => { const cnt = s.subs.reduce((a, sub) => a + sub.cards.length, 0); return `<label class="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-stone-50 cursor-pointer">
-          <input type="checkbox" data-sec="${esc(s.id)}" ${gameSections[s.id] ? 'checked' : ''} class="accent-stone-800 w-4 h-4">
-          <span class="text-sm flex-grow truncate">${s.icon || ''} ${esc(s.title)}</span><span class="text-xs text-stone-400">${cnt}</span></label>`; }).join('')}
-      </div>
-    </div>
-    <div class="bg-white rounded-2xl p-5 shadow-sm border border-stone-200 mb-4">
-      <p class="text-xs text-stone-500 mb-2">게임 유형</p>
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        ${GAME_TYPES.map((t) => `<button data-act="g-type" data-id="${t.id}" class="rounded-xl border p-3 text-center transition-colors ${gameType === t.id ? 'bg-stone-800 text-white border-stone-800' : 'bg-white border-stone-200 hover:bg-stone-50'}">
-          <div class="text-xl">${t.icon}</div><div class="text-xs mt-1 font-medium">${t.name}</div></button>`).join('')}
-      </div>
-    </div>
-    <button data-act="g-start" class="${BTN_PRIMARY} w-full" ${cards.length < 2 ? 'disabled style="opacity:.4"' : ''}>게임 시작 (${cards.length}개 구절)</button>`;
-}
-function startGame() {
-  const all = getGameCards(); if (!all.length) return;
-  gameCards = shuffle(all); gameIdx = 0; gameScore = { c: 0, w: 0 };
-  gameView = 'play'; initGameRound(); renderGame(); window.scrollTo(0, 0);
-}
-function initGameRound() {
-  const c = gameCards[gameIdx];
-  if (!c) { gameView = 'end'; return; }
-  if (gameType === 'fill') gameState = makeFillBlank(c);
-  else if (gameType === 'order') gameState = makeWordOrder(c);
-  else if (gameType === 'match') gameState = makeMatch();
-  else gameState = { typed: '', submitted: false, score: 0 };
-}
-function nextGameRound() {
-  gameIdx++;
-  if (gameIdx >= gameCards.length) { gameView = 'end'; renderGame(); return; }
-  initGameRound(); renderGame();
-}
-const strip = (w) => w.replace(/[.,…!?]/g, '');
-function makeFillBlank(card) {
-  const words = card.text.split(/\s+/);
-  const cleaned = words.map(strip);
-  const cands = cleaned.map((w, i) => ({ w, i })).filter((x) => x.w.length >= 2);
-  const pick = cands.length ? cands[Math.floor(Math.random() * cands.length)] : { w: cleaned[0] || '', i: 0 };
-  const answer = pick.w;
-  const pool = new Set();
-  gameCards.forEach((c) => c.text.split(/\s+/).forEach((w) => { const cl = strip(w); if (cl.length >= 2 && cl !== answer) pool.add(cl); }));
-  const wrongs = shuffle([...pool]).slice(0, 3);
-  while (wrongs.length < 3) wrongs.push(['하나님', '믿음', '구원', '사랑'][wrongs.length]);
-  return { displayWords: words.map((w, i) => i === pick.i ? '___' : w), answer, choices: shuffle([answer, ...wrongs]), answered: false, isCorrect: false, chosen: null };
-}
-function makeWordOrder(card) {
-  const words = card.text.split(/\s+/);
-  return { words, avail: shuffle(words.map((w, i) => ({ w, id: 'wo' + i }))), placed: [], answered: false, isCorrect: false };
-}
-function makeMatch() {
-  const card = gameCards[gameIdx];
-  const wrongs = shuffle(gameCards.filter((_, i) => i !== gameIdx)).slice(0, 3).map((c) => c.ref);
-  while (wrongs.length < 3) wrongs.push(['빌 4:13', '요 3:16', '시 23:1'][wrongs.length]);
-  return { snippet: card.text.length > 50 ? card.text.slice(0, 50) + '…' : card.text, answer: card.ref, choices: shuffle([card.ref, ...wrongs]), answered: false, isCorrect: false, chosen: null };
-}
-function scoreTyping(t, a) {
-  const norm = (s) => s.trim().replace(/\s+/g, ' ').replace(/[.,…!?]/g, '');
-  const nt = norm(t), na = norm(a);
-  if (nt === na) return 100;
-  const tw = nt.split(' '), aw = na.split(' ');
-  let ok = 0; aw.forEach((w, i) => { if (tw[i] === w) ok++; });
-  return Math.round(ok / aw.length * 100);
-}
-function renderGamePlay() {
-  const card = gameCards[gameIdx]; const s = gameState;
-  if (!card) { gameView = 'end'; return renderGameEnd(); }
-  const pct = Math.round((gameIdx + 1) / gameCards.length * 100);
-  let content = '';
-  if (gameType === 'fill') {
-    const txt = s.displayWords.map((w) => w === '___' ? `<span class="inline-block min-w-[3em] border-b-2 border-stone-800 text-center font-bold">${s.answered ? esc(s.answer) : '&nbsp;'}</span>` : esc(w)).join(' ');
-    content = `<div class="bg-white rounded-2xl p-5 shadow-sm border border-stone-200"><div class="text-xs font-bold text-stone-500">${esc(card.ref)}</div><div class="text-base leading-relaxed mt-2">${txt}</div></div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">${s.choices.map((ch, i) => `<button data-act="g-fill" data-i="${i}" class="${CHOICE(s.answered ? (ch === s.answer ? 'correct' : ch === s.chosen ? 'wrong' : '') : '')}" ${s.answered ? 'disabled' : ''}>${esc(ch)}</button>`).join('')}</div>
-      ${s.answered ? NEXT_BTN() : ''}`;
-  } else if (gameType === 'order') {
-    const placed = s.placed.map((it) => `<button data-act="g-unplace" data-id="${it.id}" class="px-2.5 py-1 rounded-lg bg-stone-800 text-white text-sm">${esc(it.w)}</button>`).join(' ');
-    const avail = s.avail.map((it) => `<button data-act="g-place" data-id="${it.id}" class="px-2.5 py-1 rounded-lg bg-white border border-stone-200 text-sm hover:bg-stone-50">${esc(it.w)}</button>`).join(' ');
-    const fb = s.answered ? (s.isCorrect ? `<div class="text-emerald-700 font-bold text-sm mt-3">✓ 정답입니다</div>` : `<div class="text-rose-700 font-bold text-sm mt-3">✗ 틀렸습니다</div><div class="text-sm text-stone-600 mt-1 bg-stone-50 rounded-lg p-3">${esc(s.words.join(' '))}</div>`) : '';
-    content = `<div class="bg-white rounded-2xl p-5 shadow-sm border border-stone-200"><div class="text-xs font-bold text-stone-500">${esc(card.ref)}</div>
-      <div class="min-h-[64px] mt-2 p-3 rounded-lg bg-stone-50 flex flex-wrap gap-1.5">${placed || '<span class="text-xs text-stone-400">아래 단어를 눌러 순서대로 놓으세요</span>'}</div>${fb}</div>
-      <div class="flex flex-wrap gap-1.5 mt-3">${avail}</div>${s.answered ? NEXT_BTN() : ''}`;
-  } else if (gameType === 'match') {
-    content = `<div class="bg-white rounded-2xl p-5 shadow-sm border border-stone-200"><div class="text-xs text-stone-500 font-bold">이 구절의 출처는?</div><div class="text-base leading-relaxed mt-2">"${esc(s.snippet)}"</div></div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">${s.choices.map((ch, i) => `<button data-act="g-match" data-i="${i}" class="${CHOICE(s.answered ? (ch === s.answer ? 'correct' : ch === s.chosen ? 'wrong' : '') : '', 'font-bold')}" ${s.answered ? 'disabled' : ''}>${esc(ch)}</button>`).join('')}</div>
-      ${s.answered ? NEXT_BTN() : ''}`;
-  } else {
-    let fb = '';
-    if (s.submitted) {
-      const cl = s.score >= 80 ? 'text-emerald-700' : s.score >= 50 ? 'text-amber-700' : 'text-rose-700';
-      const ic = s.score >= 80 ? '✓ 훌륭해요' : s.score >= 50 ? '△ 아깝네요' : '✗ 다시 도전';
-      fb = `<div class="${cl} font-bold text-sm mt-3">${ic} · 유사도 ${s.score}%</div><div class="text-sm text-stone-600 mt-1 bg-stone-50 rounded-lg p-3"><b>정답:</b> ${esc(card.text)}</div>`;
+/* ═══ 평가회 — reviews-data.js 의 글을 보여준다 (새 평가회는 그 파일에 추가하고 push) ═══ */
+let reviewOpen = '';
+// 아주 작은 마크다운: #/##/### 제목, - 목록, 1. 목록, **굵게**, --- 구분선, 빈 줄 = 문단
+function mdToHtml(md) {
+  const inline = (t) => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+  const lines = String(md || '').replace(/\r/g, '').split('\n');
+  let out = '', list = null;
+  const closeList = () => { if (list) { out += `</${list}>`; list = null; } };
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+    let m;
+    if (!line.trim()) { closeList(); continue; }
+    if (/^-{3,}$/.test(line.trim())) { closeList(); out += '<hr class="my-4 border-stone-200">'; continue; }
+    if ((m = line.match(/^(#{1,3})\s+(.*)$/))) {
+      closeList();
+      const lv = m[1].length;
+      out += lv === 1 ? `<h2 class="text-lg font-bold mt-2 mb-3">${inline(m[2])}</h2>`
+           : lv === 2 ? `<h3 class="text-base font-bold mt-5 mb-2 text-stone-800">${inline(m[2])}</h3>`
+           : `<h4 class="text-sm font-bold mt-4 mb-1.5 text-stone-700">${inline(m[2])}</h4>`;
+      continue;
     }
-    content = `<div class="bg-white rounded-2xl p-5 shadow-sm border border-stone-200"><div class="text-xs font-bold text-stone-500">${esc(card.ref)}</div>
-      <textarea id="game-ta" rows="4" class="w-full border border-stone-200 rounded-lg px-3.5 py-2.5 text-sm mt-2 focus:outline-none focus:border-stone-400" placeholder="구절을 입력하세요" ${s.submitted ? 'readonly' : ''}>${esc(s.typed)}</textarea>
-      ${s.submitted ? '' : `<button data-act="g-submit" class="${BTN_PRIMARY} w-full mt-2">제출</button>`}${fb}</div>${s.submitted ? NEXT_BTN() : ''}`;
+    if ((m = line.match(/^\s*[-•]\s+(.*)$/))) {
+      if (list !== 'ul') { closeList(); out += '<ul class="list-disc pl-5 space-y-1 text-sm text-stone-700 leading-relaxed">'; list = 'ul'; }
+      out += `<li>${inline(m[1])}</li>`; continue;
+    }
+    if ((m = line.match(/^\s*\d+[.)]\s+(.*)$/))) {
+      if (list !== 'ol') { closeList(); out += '<ol class="list-decimal pl-5 space-y-1 text-sm text-stone-700 leading-relaxed">'; list = 'ol'; }
+      out += `<li>${inline(m[1])}</li>`; continue;
+    }
+    closeList();
+    out += `<p class="text-sm text-stone-700 leading-relaxed mb-2">${inline(line)}</p>`;
   }
-  $('game-body').innerHTML = `
-    <div class="flex items-center justify-between mb-2">
-      ${BACK_BTN('g-setup', '그만하기')}
-      <div class="flex gap-3 text-sm mb-3"><span class="text-emerald-700 font-bold">정답 ${gameScore.c}</span><span class="text-stone-500">${gameIdx + 1}/${gameCards.length}</span><span class="text-rose-700 font-bold">오답 ${gameScore.w}</span></div>
-    </div>
-    ${BAR(pct)}<div class="mt-4">${content}</div>`;
+  closeList();
+  return out;
 }
-function renderGameEnd() {
-  const total = gameScore.c + gameScore.w;
-  const pct = total ? Math.round(gameScore.c / total * 100) : 0;
-  const icon = pct >= 80 ? '🏆' : pct >= 60 ? '⭐' : pct >= 40 ? '📚' : '💪';
-  const msg = pct >= 80 ? '훌륭해요!' : pct >= 60 ? '잘 했어요!' : pct >= 40 ? '조금 더 연습해요!' : '계속 도전하세요!';
-  $('game-body').innerHTML = `<div class="bg-white rounded-2xl p-8 shadow-sm border border-stone-200 text-center">
-    <div class="text-5xl">${icon}</div><div class="text-4xl font-bold mt-3">${pct}%</div>
-    <div class="text-sm text-stone-500 mt-2">${gameScore.c} / ${total} 정답<br>${msg}</div>
-    <div class="grid grid-cols-2 gap-2 mt-6"><button data-act="g-setup" class="${BTN_SECOND}">설정으로</button><button data-act="g-start" class="${BTN_PRIMARY}">다시 하기</button></div></div>`;
+function renderReview() {
+  const body = $('review-body');
+  const list = [...REVIEWS].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const cur = list.find((r) => r.id === reviewOpen);
+  if (cur) {
+    body.innerHTML = `${BACK_BTN('review-list', '평가회 목록')}
+      <div class="bg-stone-800 text-white rounded-2xl p-5 mb-4">
+        <div class="text-xs text-stone-300">${esc(cur.date || '')}${cur.with ? ` · with ${esc(cur.with)}` : ''}</div>
+        <h2 class="text-xl font-bold mt-1">${esc(cur.title)}</h2>
+      </div>
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-stone-200">${mdToHtml(cur.body)}</div>`;
+    return;
+  }
+  if (!list.length) { body.innerHTML = '<div class="bg-white rounded-2xl p-8 shadow-sm border border-stone-200 text-center text-sm text-stone-400">아직 올라온 평가회가 없습니다.</div>'; return; }
+  body.innerHTML = `<h2 class="text-lg font-bold mb-3">평가회</h2><div class="space-y-3">` + list.map((r) => `
+    <button data-act="review-open" data-id="${esc(r.id)}" class="w-full text-left bg-white rounded-2xl p-5 shadow-sm border border-stone-200 card-hover">
+      <div class="text-xs text-stone-400">${esc(r.date || '')}${r.with ? ` · with ${esc(r.with)}` : ''}</div>
+      <div class="font-bold mt-1">${esc(r.title)}</div>
+      ${r.summary ? `<div class="text-sm text-stone-500 mt-1">${esc(r.summary)}</div>` : ''}
+    </button>`).join('') + `</div>`;
 }
-$('game-body').addEventListener('change', (e) => {
-  const cb = e.target.closest('input[data-sec]'); if (!cb) return;
-  gameSections[cb.dataset.sec] = cb.checked; renderGame();
-});
-$('game-body').addEventListener('click', (e) => {
+$('review-body').addEventListener('click', (e) => {
   const el = e.target.closest('[data-act]'); if (!el) return;
-  const a = el.dataset; const s = gameState;
-  switch (a.act) {
-    case 'g-all': SECTIONS.forEach((x) => { gameSections[x.id] = a.v === '1'; }); renderGame(); break;
-    case 'g-type': gameType = a.id; renderGame(); break;
-    case 'g-start': startGame(); break;
-    case 'g-setup': gameView = 'setup'; renderGame(); break;
-    case 'g-next': nextGameRound(); break;
-    case 'g-fill': if (s.answered) break; s.chosen = s.choices[+a.i]; s.answered = true; if (s.chosen === s.answer) { gameScore.c++; s.isCorrect = true; } else gameScore.w++; renderGamePlay(); break;
-    case 'g-match': if (s.answered) break; s.chosen = s.choices[+a.i]; s.answered = true; if (s.chosen === s.answer) { gameScore.c++; s.isCorrect = true; } else gameScore.w++; renderGamePlay(); break;
-    case 'g-place': {
-      if (s.answered) break;
-      const it = s.avail.find((x) => x.id === a.id); if (!it) break;
-      s.avail = s.avail.filter((x) => x.id !== a.id); s.placed.push(it);
-      if (!s.avail.length) { s.answered = true; s.isCorrect = s.placed.map((x) => x.w).join(' ') === s.words.join(' '); if (s.isCorrect) gameScore.c++; else gameScore.w++; }
-      renderGamePlay(); break;
-    }
-    case 'g-unplace': {
-      if (s.answered) break;
-      const it = s.placed.find((x) => x.id === a.id); if (!it) break;
-      s.placed = s.placed.filter((x) => x.id !== a.id); s.avail.push(it); renderGamePlay(); break;
-    }
-    case 'g-submit': {
-      const ta = $('game-ta'); if (!ta || !ta.value.trim()) break;
-      s.typed = ta.value; s.submitted = true; s.score = scoreTyping(ta.value.trim(), gameCards[gameIdx].text);
-      if (s.score >= 70) gameScore.c++; else gameScore.w++;
-      renderGamePlay(); break;
-    }
-  }
+  if (el.dataset.act === 'review-open') { reviewOpen = el.dataset.id; renderReview(); window.scrollTo(0, 0); }
+  else if (el.dataset.act === 'review-list') { reviewOpen = ''; renderReview(); }
 });
-renderGame();
+renderReview();
 
 /* ═══════════════════════════════════════════════════
    마음의 편지 — boards/{id}/letters (익명, 전원 열람)
