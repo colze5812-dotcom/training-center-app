@@ -130,13 +130,13 @@
         </div>
       </div>
       <nav id="tabbar" class="flex mt-1 -mx-1">
+        <button class="tabbtn" data-tab="review"><i class="fa-solid fa-clipboard-check"></i>평가회</button>
         <button class="tabbtn" data-tab="cal"><i class="fa-regular fa-calendar"></i>캘린더</button>
         <button class="tabbtn" data-tab="clean"><i class="fa-solid fa-broom"></i>청소</button>
         <button class="tabbtn" data-tab="read"><i class="fa-solid fa-book-open"></i>리딩</button>
         <button class="tabbtn" data-tab="pray"><i class="fa-solid fa-hands-praying"></i>기도</button>
         <button class="tabbtn" data-tab="mem"><i class="fa-solid fa-book-bible"></i>암송</button>
         <button class="tabbtn" data-tab="study"><i class="fa-solid fa-pen-to-square"></i>공부</button>
-        <button class="tabbtn" data-tab="review"><i class="fa-solid fa-clipboard-check"></i>평가회</button>
         <button class="tabbtn" data-tab="letter"><i class="fa-regular fa-envelope"></i>편지</button>
       </nav>
     </div>
@@ -471,10 +471,10 @@ try {
 }
 
 /* ── 라우팅: #/b/<id>/<탭> ── */
-const TABS = ['cal', 'clean', 'read', 'pray', 'mem', 'study', 'review', 'letter'];
+const TABS = ['review', 'cal', 'clean', 'read', 'pray', 'mem', 'study', 'letter'];
 function readRoute() {
   const m = location.hash.match(/^#\/b\/([A-Za-z0-9_-]{20,})(?:\/(cal|clean|read|pray|mem|study|review|letter))?\/?$/);
-  return m ? { id: m[1], tab: m[2] || 'cal' } : null;
+  return m ? { id: m[1], tab: m[2] || 'review' } : null;
 }
 function newBoardId() {
   const bytes = crypto.getRandomValues(new Uint8Array(18));
@@ -510,7 +510,7 @@ if (!route) {
 
 /* ── 탭 ── */
 function switchTab(tab) {
-  if (!TABS.includes(tab)) tab = 'cal';
+  if (!TABS.includes(tab)) tab = 'review';
   TABS.forEach((t) => { const el = $('tab-' + t); tab === t ? show(el) : hide(el); });
   document.querySelectorAll('.tabbtn').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
   history.replaceState(null, '', `#/b/${boardId}/${tab}`);
