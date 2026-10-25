@@ -25,7 +25,7 @@
 |---|---|
 | `index.html` | 앱 본체 |
 | `bible-data.js` | 암송 구절·성경공부 문제 데이터 (암송카드앱에서 그대로 뽑음). 구절을 고칠 땐 여기 |
-| `reviews-data.js` | 평가회 글. `{id, date, with, title, summary, body(마크다운)}` 배열. 새 평가회는 여기에 추가 |
+| `reviews-data.js` | 평가회 글. `{id, date, with, title, summary, body(마크다운)}` 배열. 새 평가회는 여기에 추가. **고친 뒤 index.html 의 `reviews-data.js?v=` 값도 바꿀 것** (안 바꾸면 폰이 10분 캐시된 옛 글을 보여준다) |
 | `config.js` | Firebase 접속 정보 (기도제목보드와 같음) |
 | `firestore.rules` | 접근 규칙. **콘솔에 다시 게시해야 한다** (아래) |
 
