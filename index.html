@@ -126,6 +126,7 @@
         <button class="tabbtn" data-tab="clean"><i class="fa-solid fa-broom"></i>청소</button>
         <button class="tabbtn" data-tab="read"><i class="fa-solid fa-book-open"></i>리딩표</button>
         <button class="tabbtn" data-tab="pray"><i class="fa-solid fa-hands-praying"></i>기도제목</button>
+        <button class="tabbtn" data-tab="bible"><i class="fa-solid fa-book-bible"></i>암송</button>
         <button class="tabbtn" data-tab="letter"><i class="fa-regular fa-envelope"></i>편지</button>
       </nav>
     </div>
@@ -264,6 +265,22 @@
         적는 즉시 모든 형제 화면에 반영됩니다.
         <b>링크를 아는 사람은 누구나 읽고 고칠 수 있으니</b> 단톡방 밖으로 내보내지 마세요.
       </p>
+    </div>
+
+    <!-- ── 암송 (암송카드앱을 훈련관 모드로 띄움) ── -->
+    <div id="tab-bible" class="tab" hidden>
+      <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-stone-200 mb-4">
+        <h2 class="text-lg font-bold mb-2">암송 진도</h2>
+        <div id="bible-progress" class="text-sm"></div>
+      </div>
+      <div id="bible-frame-wrap" class="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
+        <div id="bible-need-me" hidden class="p-8 text-center text-stone-500 text-sm">
+          오른쪽 위 <b>내 이름</b>을 먼저 골라야 내 암송카드가 열립니다.
+          <div class="mt-4"><button id="bible-pick-me" class="text-sm px-4 py-2.5 rounded-lg bg-stone-800 hover:bg-stone-900 text-white transition-colors">내 이름 고르기</button></div>
+        </div>
+        <iframe id="bible-frame" title="암송카드" class="w-full border-0" style="height:calc(100vh - 150px);min-height:520px" hidden></iframe>
+      </div>
+      <p class="text-xs text-stone-400 mt-3">암송카드앱(colze5812-dotcom.github.io/bible-memory-app)을 그대로 띄운 것입니다. 답변·메모·외운 구절은 이 보드의 내 자리에 저장됩니다.</p>
     </div>
 
     <!-- ── 마음의 편지 ── -->
@@ -451,9 +468,9 @@ try {
 }
 
 /* ── 라우팅: #/b/<id>/<탭> ── */
-const TABS = ['cal', 'clean', 'read', 'pray', 'letter'];
+const TABS = ['cal', 'clean', 'read', 'pray', 'bible', 'letter'];
 function readRoute() {
-  const m = location.hash.match(/^#\/b\/([A-Za-z0-9_-]{20,})(?:\/(cal|clean|read|pray|letter))?\/?$/);
+  const m = location.hash.match(/^#\/b\/([A-Za-z0-9_-]{20,})(?:\/(cal|clean|read|pray|bible|letter))?\/?$/);
   return m ? { id: m[1], tab: m[2] || 'cal' } : null;
 }
 function newBoardId() {
@@ -529,6 +546,7 @@ function startBoard(tab) {
     renderClean();
     renderRead();
     renderCalLists();
+    renderBible();
   }, (e) => showToast('불러오기 실패: ' + (e.code || e.message), 'error'));
 
   makeEditable($('board-title'), 'title');
@@ -537,6 +555,7 @@ function startBoard(tab) {
   startCalendar();
   startReading();
   startLetters();
+  startBible();
 }
 
 // 제목·주차 라벨을 눌러서 바로 고치기
@@ -592,7 +611,7 @@ function openMePicker() {
     list.querySelectorAll('[data-me]').forEach((b) => b.addEventListener('click', () => {
       me = b.dataset.me;
       localStorage.setItem('hq_me_' + boardId, me);
-      renderMe(); renderRead();
+      renderMe(); renderRead(); renderBible();
       closeModal($('me-modal'));
     }));
   }
@@ -984,6 +1003,57 @@ async function editReading(day) {
   try { await setDoc(readRef(), { [me]: { [String(day)]: value } }, { merge: true }); }
   catch (e) { showToast('저장 실패: ' + (e.code || e.message), 'error'); }
 }
+
+/* ═══════════════════════════════════════════════════
+   암송 — 암송카드앱을 iframe 으로 띄우고, 진도는 boards/{id}/bible/{memberId} 에서 읽는다
+   (암송카드앱이 ?board=&me=&name= 을 받으면 동기화 코드 대신 그 자리에 저장한다)
+   ═══════════════════════════════════════════════════ */
+const BIBLE_APP_URL = 'https://colze5812-dotcom.github.io/bible-memory-app/';
+let bibleDocs = {};   // memberId -> { memCount, total, name, updatedAt }
+let bibleFrameKey = '';
+
+function startBible() {
+  onSnapshot(collection(db, 'boards', boardId, 'bible'), (snap) => {
+    bibleDocs = {};
+    snap.docs.forEach((d) => { bibleDocs[d.id] = d.data(); });
+    renderBible();
+  }, (e) => showToast('암송 진도 불러오기 실패: ' + (e.code || e.message), 'error'));
+}
+
+function renderBible() {
+  // 진도표: 기도제목 탭 멤버 순서대로, 기록 없는 사람은 '-'
+  const box = $('bible-progress');
+  if (members.length === 0) {
+    box.innerHTML = '<p class="text-stone-400">기도제목 탭에서 형제를 먼저 추가해 주세요.</p>';
+  } else {
+    box.innerHTML = `<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">` + members.map((m) => {
+      const d = bibleDocs[m.id];
+      const n = d ? (Number(d.memCount) || 0) : 0;
+      const t = d ? (Number(d.total) || 0) : 0;
+      const isMe = m.id === me;
+      return `<div class="rounded-xl px-3 py-2 ${isMe ? 'bg-amber-50 border border-amber-200' : 'bg-stone-50'}">
+        <div class="font-bold truncate">${esc(m.name)}</div>
+        <div class="text-xs ${d ? 'text-stone-700' : 'text-stone-400'}">${d ? `${n}절 외움${t ? ` / ${t}절` : ''}` : '-'}</div>
+      </div>`;
+    }).join('') + `</div>`;
+  }
+
+  // 내 암송카드
+  const mine = myMember();
+  const frame = $('bible-frame');
+  if (!mine) {
+    show($('bible-need-me')); hide(frame);
+    bibleFrameKey = '';
+    return;
+  }
+  hide($('bible-need-me')); show(frame);
+  const key = mine.id + '|' + mine.name;
+  if (key !== bibleFrameKey) {
+    bibleFrameKey = key;
+    frame.src = BIBLE_APP_URL + '?board=' + encodeURIComponent(boardId) + '&me=' + encodeURIComponent(mine.id) + '&name=' + encodeURIComponent(mine.name);
+  }
+}
+$('bible-pick-me').addEventListener('click', openMePicker);
 
 /* ═══════════════════════════════════════════════════
    마음의 편지 — boards/{id}/letters (익명, 전원 열람)
