@@ -930,24 +930,20 @@ $('read-next').addEventListener('click', () => { R.month++; if (R.month > 11) { 
 
 function sumRec(rec) { return Object.values(rec || {}).reduce((s, v) => s + (Number(v) || 0), 0); }
 
-// 월별 합산 + 누적 표 (매달 장수 기준으로 시상하므로 월 단위 합계와 누적을 같이 보여준다)
+// 이달 합산 순위 (상벌을 달마다 주므로 누적이 아니라 보고 있는 달만 합산한다. 지난달은 ‹ › 로 넘겨서 본다)
 function renderReadSummary() {
   const box = $('read-summary');
-  const monthKeys = Object.keys(R.all).sort();
-  if (members.length === 0 || monthKeys.length === 0) { box.innerHTML = ''; return; }
-  const rows = members.map((m) => {
-    const per = monthKeys.map((k) => sumRec((R.all[k] || {})[m.id]));
-    return { name: m.name, id: m.id, per, total: per.reduce((a, b) => a + b, 0) };
-  }).sort((a, b) => b.total - a.total);
-  const curKey = monthKey(R.year, R.month);
-  let html = `<h3 class="text-sm font-bold text-stone-700 mt-6 mb-2">월별 합산 · 누적</h3>
-    <div class="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0"><table class="read-table"><tr><th class="name">이름</th>`;
-  html += monthKeys.map((k) => `<th class="${k === curKey ? 'today' : ''}" style="min-width:52px">${k.slice(2).replace('-', '.')}</th>`).join('');
-  html += `<th style="min-width:56px">누적</th></tr>`;
-  html += rows.map((r) => `<tr class="${r.id === me ? 'me' : ''}"><td class="name">${esc(r.name)}</td>` +
-    r.per.map((v, i) => `<td class="${v ? 'has' : ''}${monthKeys[i] === curKey ? ' today' : ''}">${v || ''}</td>`).join('') +
-    `<td class="total">${r.total || ''}</td></tr>`).join('');
-  html += `</table></div><p class="text-xs text-stone-400 mt-2">누적이 많은 순서입니다.</p>`;
+  if (members.length === 0) { box.innerHTML = ''; return; }
+  const rows = members.map((m) => ({ name: m.name, id: m.id, total: sumRec(R.data[m.id]) })).sort((a, b) => b.total - a.total);
+  if (!rows.some((r) => r.total)) { box.innerHTML = ''; return; }
+  let rank = 0, prev = null;
+  let html = `<h3 class="text-sm font-bold text-stone-700 mt-6 mb-2">${R.month + 1}월 합산</h3>
+    <table class="read-table"><tr><th style="min-width:36px">순위</th><th class="name">이름</th><th style="min-width:64px">장수</th></tr>`;
+  html += rows.map((r, i) => {
+    if (r.total !== prev) { rank = i + 1; prev = r.total; }
+    return `<tr class="${r.id === me ? 'me' : ''}"><td>${r.total ? rank : ''}</td><td class="name">${esc(r.name)}</td><td class="total">${r.total || ''}</td></tr>`;
+  }).join('');
+  html += `</table><p class="text-xs text-stone-400 mt-2">이달 읽은 장수가 많은 순서입니다. 같은 장수는 같은 순위입니다.</p>`;
   box.innerHTML = html;
 }
 
