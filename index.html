@@ -930,20 +930,16 @@ $('read-next').addEventListener('click', () => { R.month++; if (R.month > 11) { 
 
 function sumRec(rec) { return Object.values(rec || {}).reduce((s, v) => s + (Number(v) || 0), 0); }
 
-// 이달 합산 순위 (상벌을 달마다 주므로 누적이 아니라 보고 있는 달만 합산한다. 지난달은 ‹ › 로 넘겨서 본다)
+// 이달 합산 (상벌을 달마다 주므로 누적이 아니라 보고 있는 달만 합산한다. 지난달은 ‹ › 로 넘겨서 본다. 등수는 안 매김)
 function renderReadSummary() {
   const box = $('read-summary');
   if (members.length === 0) { box.innerHTML = ''; return; }
-  const rows = members.map((m) => ({ name: m.name, id: m.id, total: sumRec(R.data[m.id]) })).sort((a, b) => b.total - a.total);
+  const rows = members.map((m) => ({ name: m.name, id: m.id, total: sumRec(R.data[m.id]) }));
   if (!rows.some((r) => r.total)) { box.innerHTML = ''; return; }
-  let rank = 0, prev = null;
   let html = `<h3 class="text-sm font-bold text-stone-700 mt-6 mb-2">${R.month + 1}월 합산</h3>
-    <table class="read-table"><tr><th style="min-width:36px">순위</th><th class="name">이름</th><th style="min-width:64px">장수</th></tr>`;
-  html += rows.map((r, i) => {
-    if (r.total !== prev) { rank = i + 1; prev = r.total; }
-    return `<tr class="${r.id === me ? 'me' : ''}"><td>${r.total ? rank : ''}</td><td class="name">${esc(r.name)}</td><td class="total">${r.total || ''}</td></tr>`;
-  }).join('');
-  html += `</table><p class="text-xs text-stone-400 mt-2">이달 읽은 장수가 많은 순서입니다. 같은 장수는 같은 순위입니다.</p>`;
+    <table class="read-table"><tr><th class="name">이름</th><th style="min-width:64px">장수</th></tr>`;
+  html += rows.map((r) => `<tr class="${r.id === me ? 'me' : ''}"><td class="name">${esc(r.name)}</td><td class="total">${r.total || ''}</td></tr>`).join('');
+  html += `</table>`;
   box.innerHTML = html;
 }
 
