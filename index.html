@@ -1224,6 +1224,7 @@ function renderMemSection() {
 function renderMemCards() {
   const c = memCards[memIdx];
   if (!c) { memView = 'section'; return renderMemSection(); }
+  if (memGame) return renderMemGame(c);
   const isMem = !!memorized[cardKey(c.ref)];
   const pct = Math.round((memIdx + 1) / memCards.length * 100);
   $('mem-body').innerHTML = `
@@ -1255,13 +1256,163 @@ function renderMemCards() {
     <div class="grid grid-cols-2 gap-2 mt-2">
       <button data-act="mark" data-val="0" class="${BTN_SECOND}">다시 연습</button>
       <button data-act="mark" data-val="1" class="${BTN_PRIMARY}">외웠어요 ✓</button>
-    </div>`;
+    </div>
+    <p class="text-xs text-stone-500 mt-5 mb-2">이 구절로 연습하기</p>
+    <div class="grid grid-cols-4 gap-2">${gameButtons()}</div>`;
 }
+
+/* ── 카드 안 연습 게임: 보고 있는 구절로 바로 (빈칸 · 순서 · 객관식 · 힌트) ── */
+let memGame = null, mg = {};
+const CHO = ['ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'];
+const shuffle = (a) => [...a].sort(() => Math.random() - .5);
+const strip = (w) => w.replace(/[.,…!?;:'"()]/g, '');
+const chosung = (s) => [...s].map((ch) => { const code = ch.charCodeAt(0); return code >= 0xAC00 && code <= 0xD7A3 ? CHO[Math.floor((code - 0xAC00) / 588)] : ch; }).join('');
+const GAMES = [
+  { id: 'fill', name: '빈칸', icon: 'fa-pen' },
+  { id: 'order', name: '순서', icon: 'fa-shuffle' },
+  { id: 'choice', name: '객관식', icon: 'fa-list-check' },
+  { id: 'hint', name: '힌트', icon: 'fa-lightbulb' }
+];
+const gameButtons = () => GAMES.map((g) => `<button data-act="game" data-g="${g.id}" class="rounded-xl border py-2.5 text-center transition-colors ${memGame === g.id ? 'bg-stone-800 text-white border-stone-800' : 'bg-white border-stone-200 hover:bg-stone-50'}"><i class="fa-solid ${g.icon} text-sm"></i><div class="text-[11px] mt-1 font-medium">${g.name}</div></button>`).join('');
+
+function startMemGame(id) {
+  memGame = id;
+  const c = memCards[memIdx];
+  const words = c.text.split(/\s+/).filter(Boolean);
+  if (id === 'fill') {
+    const cand = words.map((w, i) => ({ w, i })).filter((x) => strip(x.w).length >= 2);
+    const n = Math.max(1, Math.min(6, Math.round(cand.length * 0.3)));
+    const blanks = shuffle(cand).slice(0, n).map((x) => x.i).sort((a, b) => a - b);
+    mg = { words, blanks, filled: {}, used: {}, cur: 0, chips: shuffle(blanks.map((i) => ({ i, w: words[i] }))), wrong: 0, done: false, lastWrong: null };
+  } else if (id === 'order') {
+    const size = Math.max(2, Math.ceil(words.length / 6));
+    const chunks = []; for (let i = 0; i < words.length; i += size) chunks.push(words.slice(i, i + size).join(' '));
+    mg = { chunks, avail: shuffle(chunks.map((t, i) => ({ t, id: i }))), placed: [], done: false, correct: false };
+  } else if (id === 'choice') {
+    const sameSec = memSection.subs.flatMap((sub) => sub.cards).filter((x) => x.ref !== c.ref);
+    const pool = SECTIONS.flatMap((s) => s.subs.flatMap((sub) => sub.cards)).filter((x) => x.ref !== c.ref);
+    const wrongs = shuffle(sameSec.length >= 3 ? sameSec : pool).slice(0, 3);
+    mg = { choices: shuffle([c, ...wrongs]), answered: false, chosen: null };
+  } else {
+    mg = { mode: 'first', reveal: false };
+  }
+  renderMemCards();
+  window.scrollTo(0, 0);
+}
+
+function renderMemGame(c) {
+  const g = GAMES.find((x) => x.id === memGame);
+  const pct = Math.round((memIdx + 1) / memCards.length * 100);
+  const inner = memGame === 'fill' ? renderGameFill() : memGame === 'order' ? renderGameOrder() : memGame === 'choice' ? renderGameChoice(c) : renderGameHint(c);
+  $('mem-body').innerHTML = `
+    ${BACK_BTN('g-back', '카드로')}
+    <div class="flex items-center justify-between text-xs text-stone-500 mb-2"><span>${memIdx + 1} / ${memCards.length}</span><span>${esc(g.name)} 연습</span></div>
+    ${BAR(pct)}
+    <div class="bg-white rounded-2xl p-5 shadow-sm border border-stone-200 mt-4">
+      <div class="text-xs font-bold text-stone-500 mb-2">${esc(c.ref)}</div>
+      ${inner}
+    </div>
+    <div class="grid grid-cols-2 gap-2 mt-3">
+      <button data-act="g-retry" class="${BTN_SECOND}"><i class="fa-solid fa-rotate-left text-xs mr-1"></i>다시</button>
+      <button data-act="g-next" class="${BTN_PRIMARY}" ${memIdx === memCards.length - 1 ? 'disabled style="opacity:.4"' : ''}>다음 구절<i class="fa-solid fa-chevron-right text-xs ml-1"></i></button>
+    </div>
+    <div class="grid grid-cols-4 gap-2 mt-3">${gameButtons()}</div>`;
+}
+
+function renderGameFill() {
+  const s = mg;
+  const text = s.words.map((w, i) => {
+    const bi = s.blanks.indexOf(i);
+    if (bi < 0) return esc(w);
+    if (s.filled[i]) return `<span class="font-bold text-emerald-700">${esc(w)}</span>`;
+    return `<span class="inline-block min-w-[3em] border-b-2 ${bi === s.cur ? 'border-stone-800 bg-amber-50' : 'border-stone-300'} text-center">&nbsp;</span>`;
+  }).join(' ');
+  const chips = s.chips.map((ch, k) => s.used[k] ? '' : `<button data-act="g-chip" data-k="${k}" class="px-3 py-1.5 rounded-lg border text-sm transition-colors ${s.lastWrong === k ? 'bg-rose-50 border-rose-300 text-rose-700' : 'bg-white border-stone-200 hover:bg-stone-50'}">${esc(strip(ch.w))}</button>`).join(' ');
+  const fb = s.done
+    ? `<div class="mt-3 text-sm font-bold ${s.wrong ? 'text-amber-700' : 'text-emerald-700'}">${s.wrong ? `완성! 틀린 횟수 ${s.wrong}번` : '한 번에 완성, 완벽해요!'}</div>`
+    : `<p class="text-xs text-stone-500 mt-3">빈칸(노란 칸)에 들어갈 단어를 순서대로 고르세요</p>`;
+  return `<div class="text-base leading-loose">${text}</div>${fb}<div class="flex flex-wrap gap-1.5 mt-3">${chips}</div>`;
+}
+
+function renderGameOrder() {
+  const s = mg;
+  const placed = s.placed.map((it) => `<button data-act="g-unplace" data-id="${it.id}" class="px-2.5 py-1.5 rounded-lg bg-stone-800 text-white text-sm text-left">${esc(it.t)}</button>`).join(' ');
+  const avail = s.avail.map((it) => `<button data-act="g-place" data-id="${it.id}" class="px-2.5 py-1.5 rounded-lg bg-white border border-stone-200 text-sm text-left hover:bg-stone-50">${esc(it.t)}</button>`).join(' ');
+  const fb = s.done
+    ? (s.correct ? `<div class="mt-3 text-sm font-bold text-emerald-700">정답입니다!</div>`
+                 : `<div class="mt-3 text-sm font-bold text-rose-700">순서가 틀렸어요</div><div class="text-sm text-stone-600 mt-1 bg-stone-50 rounded-lg p-3 leading-relaxed">${esc(s.chunks.join(' '))}</div>`)
+    : `<p class="text-xs text-stone-500 mt-3">구절 순서대로 덩어리를 누르세요. 놓은 것을 누르면 다시 내려옵니다</p>`;
+  return `<div class="min-h-[72px] p-3 rounded-lg bg-stone-50 flex flex-wrap gap-1.5">${placed || '<span class="text-xs text-stone-400">여기에 순서대로 놓입니다</span>'}</div>${fb}<div class="flex flex-wrap gap-1.5 mt-3">${avail}</div>`;
+}
+
+function renderGameChoice(c) {
+  const s = mg;
+  const btns = s.choices.map((x, i) => {
+    const st = s.answered ? (x.ref === c.ref ? 'correct' : (s.chosen === i ? 'wrong' : '')) : '';
+    return `<button data-act="g-choice" data-i="${i}" class="w-full text-left px-4 py-3 rounded-xl border text-sm leading-relaxed transition-colors ${st === 'correct' ? 'bg-emerald-50 border-emerald-300 text-emerald-800 font-bold' : st === 'wrong' ? 'bg-rose-50 border-rose-300 text-rose-700' : 'bg-white border-stone-200 hover:bg-stone-50'}" ${s.answered ? 'disabled' : ''}>${esc(x.text)}</button>`;
+  }).join('');
+  const ok = s.answered && s.choices[s.chosen].ref === c.ref;
+  return `<div class="text-sm text-stone-500 mb-3">이 구절의 본문은?</div><div class="space-y-2">${btns}</div>` +
+    (s.answered ? `<div class="mt-3 text-sm font-bold ${ok ? 'text-emerald-700' : 'text-rose-700'}">${ok ? '정답입니다!' : '틀렸어요'}</div>` : '');
+}
+
+function renderGameHint(c) {
+  const s = mg;
+  const words = c.text.split(/\s+/).filter(Boolean);
+  const hint = s.mode === 'first'
+    ? words.map((w) => `<span class="font-bold">${esc(w.charAt(0))}</span><span class="text-stone-300">${'_'.repeat(Math.max(1, Math.min(w.length - 1, 4)))}</span>`).join(' ')
+    : words.map((w) => `<span class="font-bold">${esc(chosung(w))}</span>`).join(' ');
+  const pill = (m, label) => `<button data-act="g-hint-mode" data-m="${m}" class="text-xs px-3 py-1.5 rounded-full border ${s.mode === m ? 'bg-stone-800 text-white border-stone-800' : 'bg-white border-stone-200'}">${label}</button>`;
+  return `<div class="flex gap-2 mb-3">${pill('first', '첫 글자')}${pill('cho', '초성')}</div>
+    <div class="text-base leading-loose tracking-wide">${hint}</div>
+    ${s.reveal ? `<div class="mt-4 pt-3 border-t border-stone-100 text-base leading-relaxed text-stone-800">${esc(c.text)}</div>` : `<button data-act="g-reveal" class="${BTN_SECOND} w-full mt-4">정답 보기</button>`}`;
+}
+
+function memGameClick(a) {
+  const s = mg;
+  switch (a.act) {
+    case 'game': startMemGame(a.g); return true;
+    case 'g-back': memGame = null; memFlipped = false; renderMemCards(); return true;
+    case 'g-retry': startMemGame(memGame); return true;
+    case 'g-next': if (memIdx < memCards.length - 1) { memIdx++; startMemGame(memGame); } return true;
+    case 'g-chip': {
+      if (s.done) return true;
+      const k = +a.k, target = s.blanks[s.cur];
+      if (strip(s.chips[k].w) === strip(s.words[target])) {
+        s.used[k] = true; s.filled[target] = true; s.cur++; s.lastWrong = null;
+        if (s.cur >= s.blanks.length) s.done = true;
+      } else {
+        s.wrong++; s.lastWrong = k;
+        setTimeout(() => { if (mg === s && s.lastWrong === k) { s.lastWrong = null; renderMemCards(); } }, 700);
+      }
+      renderMemCards(); return true;
+    }
+    case 'g-place': {
+      if (s.done) return true;
+      const it = s.avail.find((x) => x.id === +a.id); if (!it) return true;
+      s.avail = s.avail.filter((x) => x.id !== +a.id); s.placed.push(it);
+      if (!s.avail.length) { s.done = true; s.correct = s.placed.every((x, i) => x.id === i); }
+      renderMemCards(); return true;
+    }
+    case 'g-unplace': {
+      if (s.done) return true;
+      const it = s.placed.find((x) => x.id === +a.id); if (!it) return true;
+      s.placed = s.placed.filter((x) => x.id !== +a.id); s.avail.push(it);
+      renderMemCards(); return true;
+    }
+    case 'g-choice': if (!s.answered) { s.chosen = +a.i; s.answered = true; renderMemCards(); } return true;
+    case 'g-hint-mode': s.mode = a.m; renderMemCards(); return true;
+    case 'g-reveal': s.reveal = true; renderMemCards(); return true;
+  }
+  return false;
+}
+
+
 
 let _tx = 0, _ty = 0;
 $('mem-body').addEventListener('touchstart', (e) => { _tx = e.touches[0].clientX; _ty = e.touches[0].clientY; }, { passive: true });
 $('mem-body').addEventListener('touchend', (e) => {
-  if (memView !== 'cards') return;
+  if (memView !== 'cards' || memGame) return;
   const dx = e.changedTouches[0].clientX - _tx, dy = e.changedTouches[0].clientY - _ty;
   if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 48) {
     if (dx < 0 && memIdx < memCards.length - 1) { memIdx++; memFlipped = false; renderMemCards(); }
@@ -1272,13 +1423,14 @@ $('mem-body').addEventListener('touchend', (e) => {
 $('mem-body').addEventListener('click', (e) => {
   const el = e.target.closest('[data-act]'); if (!el) return;
   const a = el.dataset;
+  if (memGameClick(a)) return;
   switch (a.act) {
     case 'pick-me': openMePicker(); break;
-    case 'open-section': memSection = SECTIONS.find((s) => s.id === a.id); memView = 'section'; renderMem(); break;
-    case 'mem-home': memView = 'home'; renderMem(); break;
-    case 'mem-section': memView = 'section'; renderMem(); break;
-    case 'start-cards': memCards = memSection.subs[+a.sub].cards; memIdx = +a.start || 0; memFlipped = false; memView = 'cards'; renderMem(); break;
-    case 'start-all': memCards = memSection.subs.flatMap((s) => s.cards); memIdx = 0; memFlipped = false; memView = 'cards'; renderMem(); break;
+    case 'open-section': memSection = SECTIONS.find((s) => s.id === a.id); memView = 'section'; memGame = null; renderMem(); break;
+    case 'mem-home': memView = 'home'; memGame = null; renderMem(); break;
+    case 'mem-section': memView = 'section'; memGame = null; renderMem(); break;
+    case 'start-cards': memCards = memSection.subs[+a.sub].cards; memIdx = +a.start || 0; memFlipped = false; memGame = null; memView = 'cards'; renderMem(); break;
+    case 'start-all': memCards = memSection.subs.flatMap((s) => s.cards); memIdx = 0; memFlipped = false; memGame = null; memView = 'cards'; renderMem(); break;
     case 'flip': memFlipped = !memFlipped; $('flashcard').classList.toggle('flipped', memFlipped); break;
     case 'prev': if (memIdx > 0) { memIdx--; memFlipped = false; renderMemCards(); } break;
     case 'next': if (memIdx < memCards.length - 1) { memIdx++; memFlipped = false; renderMemCards(); } break;
